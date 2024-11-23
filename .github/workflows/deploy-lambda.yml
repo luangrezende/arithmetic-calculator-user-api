@@ -22,11 +22,13 @@ jobs:
 
       # Instala as dependências do projeto
       - name: Install Dependencies
+        working-directory: ArithmeticCalculatorUserApi
         run: dotnet restore
 
       # Publica o projeto
       - name: Publish Project
-        run: dotnet lambda package --configuration Release --output-package ./output/deployment.zip
+        working-directory: ArithmeticCalculatorUserApi
+        run: dotnet lambda package --configuration Release --output-package ../output/deployment.zip
 
       # Configura o AWS CLI
       - name: Configure AWS CLI
