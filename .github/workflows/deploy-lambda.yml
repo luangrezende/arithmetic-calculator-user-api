@@ -20,6 +20,14 @@ jobs:
         with:
           dotnet-version: 8.0
 
+      # Instala o Amazon Lambda .NET CLI Tools
+      - name: Install Amazon Lambda Tools
+        run: dotnet tool install -g Amazon.Lambda.Tools
+
+      # Adiciona o caminho das ferramentas globais do .NET ao PATH
+      - name: Add .NET Tools to PATH
+        run: echo "::add-path::${HOME}/.dotnet/tools"
+
       # Instala as dependências do projeto
       - name: Install Dependencies
         working-directory: ArithmeticCalculatorUserApi
