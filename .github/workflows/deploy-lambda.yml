@@ -29,7 +29,7 @@ jobs:
         run: dotnet restore
 
       - name: Build and Package Lambda
-        working-directory: ArithmeticCalculatorUserApi
+        working-directory: ArithmeticCalculatorUserApi.Api
         run: dotnet lambda package --configuration Release --output-package ../output/deployment.zip
 
       - name: Configure AWS CLI

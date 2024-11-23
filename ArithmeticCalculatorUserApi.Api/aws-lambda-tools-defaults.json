@@ -4,7 +4,7 @@
   "configuration": "Release",
   "framework": "net8.0",
   "function-runtime": "dotnet8",
-  "function-memory-size": 256,
+  "function-memory-size": 512,
   "function-timeout": 30,
   "function-handler": "ArithmeticCalculatorUserApi::ArithmeticCalculatorUserApi.Function::FunctionHandler",
   "function-name": "ArithmeticCalculatorUserApi",
