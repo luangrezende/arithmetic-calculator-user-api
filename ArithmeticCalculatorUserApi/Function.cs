@@ -19,8 +19,8 @@ namespace ArithmeticCalculatorUserApi
         public Function()
         {
             // Variáveis de ambiente
-            _connectionString = Environment.GetEnvironmentVariable("mysql-connection-string");
-            _jwtSecret = Environment.GetEnvironmentVariable("jwt-secret-key");
+            _connectionString = Environment.GetEnvironmentVariable("mysqlConnectionString");
+            _jwtSecret = Environment.GetEnvironmentVariable("jwtSecretKey");
         }
 
         /// <summary>
