@@ -42,14 +42,16 @@ jobs:
       - name: Deploy Lambda Function
         run: |
           if aws lambda get-function --function-name ArithmeticCalculatorUserApi; then
+            echo "Updating Lambda function"
             aws lambda update-function-code \
               --function-name ArithmeticCalculatorUserApi \
               --zip-file fileb://./output/deployment.zip
           else
+            echo "Creating Lambda function"
             aws lambda create-function \
               --function-name ArithmeticCalculatorUserApi \
               --runtime dotnet8 \
-              --role arn:aws:iam::123456789012:role/service-role/lambda-role \
+              --role arn:aws:iam::<AWS_ACCOUNT_ID>:role/<YOUR_LAMBDA_ROLE_NAME> \
               --handler ArithmeticCalculatorUserApi::ArithmeticCalculatorUserApi.Function::FunctionHandler \
               --zip-file fileb://./output/deployment.zip
           fi
