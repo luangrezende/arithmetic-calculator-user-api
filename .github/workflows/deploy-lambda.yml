@@ -10,39 +10,35 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
+      # Faz o checkout do código
+      - name: Checkout Code
         uses: actions/checkout@v3
 
+      # Configura o .NET Core
       - name: Setup .NET
         uses: actions/setup-dotnet@v3
         with:
           dotnet-version: 8.0
 
-      - name: Install Lambda Tools
-        run: dotnet tool install -g Amazon.Lambda.Tools
-
-      - name: Add .NET tools to PATH
-        run: echo "PATH=\$PATH:~/.dotnet/tools" >> $GITHUB_ENV
-
-      - name: Install dependencies
-        working-directory: ArithmeticCalculatorUserApi
+      # Instala as dependências do projeto
+      - name: Install Dependencies
         run: dotnet restore
 
-      - name: Build the project
-        working-directory: ArithmeticCalculatorUserApi
-        run: dotnet lambda package -c Release -o package.zip
+      # Publica o projeto
+      - name: Publish Project
+        run: dotnet lambda package --configuration Release --output-package ./output/deployment.zip
 
+      # Configura o AWS CLI
       - name: Configure AWS CLI
-        uses: aws-actions/configure-aws-cli@v2
+        uses: aws-actions/configure-aws-credentials@v2
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION }}
+          aws-region: us-east-1
 
-      - name: Deploy to AWS Lambda
-        working-directory: ArithmeticCalculatorUserApi
+      # Faz o deploy da Lambda
+      - name: Deploy Lambda Function
         run: |
           aws lambda update-function-code \
             --function-name ArithmeticCalculatorUserApi \
-            --zip-file fileb://package.zip \
-            --region ${{ secrets.AWS_REGION }}
+            --zip-file fileb://./output/deployment.zip

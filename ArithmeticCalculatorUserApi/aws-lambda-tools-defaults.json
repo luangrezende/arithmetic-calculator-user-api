@@ -9,5 +9,5 @@
   "function-handler": "ArithmeticCalculatorUserApi::ArithmeticCalculatorUserApi.Function::FunctionHandler",
   "function-name": "ArithmeticCalculatorUserApi",
   "package-type": "Zip",
-  "function-role": "arn:aws:iam::123456789012:role/service-role/your-lambda-role"
+  "function-role": "arn:aws:iam::565393042425:role/ArithmeticCalculatorUserLambdaRole"
 }
