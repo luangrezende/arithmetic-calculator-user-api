@@ -107,7 +107,7 @@ namespace ArithmeticCalculatorUserApi
             catch (Exception ex)
             {
                 context.Logger.LogError($"Error: {ex.Message}");
-                return CreateResponse(500, new { message = "Internal server error." });
+                return CreateResponse(500, new { message = ex.Message });
             }
         }
 
