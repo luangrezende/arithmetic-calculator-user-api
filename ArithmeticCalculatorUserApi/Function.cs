@@ -9,7 +9,6 @@ using Microsoft.IdentityModel.Tokens;
 using MySql.Data.MySqlClient;
 
 [assembly: LambdaSerializer(typeof(Amazon.Lambda.Serialization.SystemTextJson.DefaultLambdaJsonSerializer))]
-
 namespace ArithmeticCalculatorUserApi
 {
     public class Function
