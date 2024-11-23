@@ -22,7 +22,7 @@ jobs:
         run: dotnet tool install -g Amazon.Lambda.Tools
 
       - name: Add .NET tools to PATH
-        run: echo "::add-path::$(dotnet --list-tools | grep 'global-tools' | awk '{print $2}')"
+        run: echo "PATH=\$PATH:~/.dotnet/tools" >> $GITHUB_ENV
 
       - name: Install dependencies
         working-directory: ArithmeticCalculatorUserApi
