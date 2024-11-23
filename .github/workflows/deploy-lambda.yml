@@ -24,9 +24,9 @@ jobs:
       - name: Install Amazon Lambda Tools
         run: dotnet tool install -g Amazon.Lambda.Tools
 
-      # Adiciona o caminho das ferramentas globais do .NET ao PATH
+      # Adiciona o caminho das ferramentas globais do .NET ao PATH usando o método atualizado
       - name: Add .NET Tools to PATH
-        run: echo "::add-path::${HOME}/.dotnet/tools"
+        run: echo "${HOME}/.dotnet/tools" >> $GITHUB_PATH
 
       # Instala as dependências do projeto
       - name: Install Dependencies
