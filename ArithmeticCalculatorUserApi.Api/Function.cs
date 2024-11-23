@@ -5,10 +5,12 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Amazon.Lambda.APIGatewayEvents;
 using Amazon.Lambda.Core;
+using ArithmeticCalculatorUserApi.Domain.Models.Response;
 using Microsoft.IdentityModel.Tokens;
 using MySql.Data.MySqlClient;
 
 [assembly: LambdaSerializer(typeof(Amazon.Lambda.Serialization.SystemTextJson.DefaultLambdaJsonSerializer))]
+
 namespace ArithmeticCalculatorUserApi
 {
     public class Function
@@ -18,14 +20,10 @@ namespace ArithmeticCalculatorUserApi
 
         public Function()
         {
-            // Variáveis de ambiente
             _connectionString = Environment.GetEnvironmentVariable("mysqlConnectionString");
             _jwtSecret = Environment.GetEnvironmentVariable("jwtSecretKey");
         }
 
-        /// <summary>
-        /// Gera um token JWT para o usuário autenticado.
-        /// </summary>
         private string GenerateJwtToken(int userId, string username, string status)
         {
             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtSecret));
@@ -49,19 +47,16 @@ namespace ArithmeticCalculatorUserApi
             return new JwtSecurityTokenHandler().WriteToken(token);
         }
 
-        /// <summary>
-        /// Endpoint para realizar login.
-        /// </summary>
-        public APIGatewayProxyResponse Login(APIGatewayProxyRequest request, ILambdaContext context)
+        public object Login(APIGatewayProxyRequest request, ILambdaContext context)
         {
             try
             {
                 if (string.IsNullOrEmpty(request.Body))
                 {
-                    return new APIGatewayProxyResponse
+                    return new
                     {
-                        StatusCode = 400,
-                        Body = JsonSerializer.Serialize(new { message = "Request body cannot be null or empty." })
+                        status = 400,
+                        data = new { error = "Request body cannot be null or empty." }
                     };
                 }
 
@@ -69,7 +64,11 @@ namespace ArithmeticCalculatorUserApi
 
                 if (user == null || string.IsNullOrWhiteSpace(user.Username) || string.IsNullOrWhiteSpace(user.Password))
                 {
-                    return CreateResponse(400, new { message = "Username and password are required." });
+                    return new
+                    {
+                        status = 400,
+                        data = new { error = "Username and password are required." }
+                    };
                 }
 
                 using (var connection = new MySqlConnection(_connectionString))
@@ -92,70 +91,48 @@ namespace ArithmeticCalculatorUserApi
 
                                 var token = GenerateJwtToken(userId, username, status);
 
-                                return CreateResponse(200, new
+                                return new
                                 {
-                                    message = "Login successful!",
-                                    token = token
-                                });
+                                    status = 200,
+                                    data = new TokenResponse
+                                    {
+                                        Token = token,
+                                        Validation = 7200 // 2 horas em segundos
+                                    }
+                                };
                             }
                         }
                     }
                 }
 
-                return CreateResponse(401, new { message = "Invalid username or password." });
-            }
-            catch (Exception ex)
-            {
-                context.Logger.LogError($"Error: {ex.Message}");
-                return CreateResponse(500, new { message = ex.Message });
-            }
-        }
-
-        public APIGatewayProxyResponse FunctionHandler(APIGatewayProxyRequest request, ILambdaContext context)
-        {
-            try
-            {
-                if (string.IsNullOrEmpty(request.Path) || string.IsNullOrEmpty(request.HttpMethod))
+                return new
                 {
-                    return new APIGatewayProxyResponse
-                    {
-                        StatusCode = 400,
-                        Body = JsonSerializer.Serialize(new { message = "Invalid request." })
-                    };
-                }
-
-                if (request.HttpMethod == "POST" && request.Path == "/login")
-                {
-                    return Login(request, context);
-                }
-
-                return new APIGatewayProxyResponse
-                {
-                    StatusCode = 404,
-                    Body = JsonSerializer.Serialize(new { message = "Endpoint not found." })
+                    status = 401,
+                    data = new { error = "Invalid username or password." }
                 };
             }
             catch (Exception ex)
             {
                 context.Logger.LogError($"Error: {ex.Message}");
-                return new APIGatewayProxyResponse
+                return new
                 {
-                    StatusCode = 500,
-                    Body = JsonSerializer.Serialize(new { message = "Internal server error." })
+                    status = 500,
+                    data = new { error = "Internal server error." }
                 };
             }
         }
 
-        private static APIGatewayProxyResponse CreateResponse(int statusCode, object body)
+        public object FunctionHandler(APIGatewayProxyRequest request, ILambdaContext context)
         {
-            return new APIGatewayProxyResponse
+            if (request.HttpMethod == "POST" && request.Path == "/login")
             {
-                StatusCode = statusCode,
-                Body = JsonSerializer.Serialize(body),
-                Headers = new Dictionary<string, string>
-                {
-                    { "Content-Type", "application/json" }
-                }
+                return Login(request, context);
+            }
+
+            return new
+            {
+                status = 404,
+                data = new { error = "Endpoint not found." }
             };
         }
     }
