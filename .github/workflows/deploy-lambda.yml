@@ -10,35 +10,28 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # Faz o checkout do código
       - name: Checkout Code
         uses: actions/checkout@v3
 
-      # Configura o .NET Core
       - name: Setup .NET
         uses: actions/setup-dotnet@v3
         with:
           dotnet-version: 8.0
 
-      # Instala o Amazon Lambda .NET CLI Tools
       - name: Install Amazon Lambda Tools
         run: dotnet tool install -g Amazon.Lambda.Tools
 
-      # Adiciona o caminho das ferramentas globais do .NET ao PATH usando o método atualizado
       - name: Add .NET Tools to PATH
         run: echo "${HOME}/.dotnet/tools" >> $GITHUB_PATH
 
-      # Instala as dependências do projeto
       - name: Install Dependencies
         working-directory: ArithmeticCalculatorUserApi
         run: dotnet restore
 
-      # Publica o projeto
-      - name: Publish Project
+      - name: Build and Package Lambda
         working-directory: ArithmeticCalculatorUserApi
         run: dotnet lambda package --configuration Release --output-package ../output/deployment.zip
 
-      # Configura o AWS CLI
       - name: Configure AWS CLI
         uses: aws-actions/configure-aws-credentials@v2
         with:
@@ -46,9 +39,17 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-1
 
-      # Faz o deploy da Lambda
       - name: Deploy Lambda Function
         run: |
-          aws lambda update-function-code \
-            --function-name ArithmeticCalculatorUserApi \
-            --zip-file fileb://./output/deployment.zip
+          if aws lambda get-function --function-name ArithmeticCalculatorUserApi; then
+            aws lambda update-function-code \
+              --function-name ArithmeticCalculatorUserApi \
+              --zip-file fileb://./output/deployment.zip
+          else
+            aws lambda create-function \
+              --function-name ArithmeticCalculatorUserApi \
+              --runtime dotnet8 \
+              --role arn:aws:iam::123456789012:role/service-role/lambda-role \
+              --handler ArithmeticCalculatorUserApi::ArithmeticCalculatorUserApi.Function::FunctionHandler \
+              --zip-file fileb://./output/deployment.zip
+          fi
