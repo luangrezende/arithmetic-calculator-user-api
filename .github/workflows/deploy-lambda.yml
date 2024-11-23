@@ -51,7 +51,7 @@ jobs:
             aws lambda create-function \
               --function-name ArithmeticCalculatorUserApi \
               --runtime dotnet8 \
-              --role arn:aws:iam::<AWS_ACCOUNT_ID>:role/<YOUR_LAMBDA_ROLE_NAME> \
+              --role arn:aws:iam::565393042425:role/ArithmeticCalculatorUserLambdaRole\
               --handler ArithmeticCalculatorUserApi::ArithmeticCalculatorUserApi.Function::FunctionHandler \
               --zip-file fileb://./output/deployment.zip
           fi
