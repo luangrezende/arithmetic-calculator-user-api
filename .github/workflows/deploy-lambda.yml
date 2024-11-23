@@ -32,6 +32,9 @@ jobs:
         working-directory: ArithmeticCalculatorUserApi
         run: dotnet lambda package -c Release -o package.zip
 
+      - name: Install curl
+        run: sudo apt-get install -y curl
+
       - name: Install AWS CLI
         run: |
           curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
