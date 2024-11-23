@@ -32,11 +32,12 @@ jobs:
         working-directory: ArithmeticCalculatorUserApi
         run: dotnet lambda package -c Release -o package.zip
 
-      - name: Install AWS CLI
-        run: |
-          wget "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -O "awscliv2.zip"
-          unzip awscliv2.zip
-          ./aws/install --update
+      - name: Configure AWS CLI
+        uses: aws-actions/configure-aws-cli@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
 
       - name: Deploy to AWS Lambda
         working-directory: ArithmeticCalculatorUserApi
@@ -45,6 +46,3 @@ jobs:
             --function-name ArithmeticCalculatorUserApi \
             --zip-file fileb://package.zip \
             --region ${{ secrets.AWS_REGION }}
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
