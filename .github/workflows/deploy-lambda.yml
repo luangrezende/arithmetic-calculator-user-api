@@ -18,6 +18,12 @@ jobs:
         with:
           dotnet-version: 8.0
 
+      - name: Install Lambda Tools
+        run: dotnet tool install -g Amazon.Lambda.Tools
+
+      - name: Add .NET tools to PATH
+        run: echo "::add-path::$(dotnet --list-tools | grep 'global-tools' | awk '{print $2}')"
+
       - name: Install dependencies
         working-directory: ArithmeticCalculatorUserApi
         run: dotnet restore
