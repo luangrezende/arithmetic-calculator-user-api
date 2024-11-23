@@ -19,9 +19,11 @@ jobs:
           dotnet-version: 8.0
 
       - name: Install dependencies
+        working-directory: ArithmeticCalculatorUserApi
         run: dotnet restore
 
       - name: Build the project
+        working-directory: ArithmeticCalculatorUserApi
         run: dotnet lambda package -c Release -o package.zip
 
       - name: Install AWS CLI
@@ -31,6 +33,7 @@ jobs:
           sudo ./aws/install --update
 
       - name: Deploy to AWS Lambda
+        working-directory: ArithmeticCalculatorUserApi
         run: |
           aws lambda update-function-code \
             --function-name ArithmeticCalculatorUserApi \
