@@ -1,0 +1,13 @@
+{
+  "profile": "default",
+  "region": "us-east-1",
+  "configuration": "Release",
+  "framework": "net8.0",
+  "function-runtime": "dotnet8",
+  "function-memory-size": 256,
+  "function-timeout": 30,
+  "function-handler": "ArithmeticCalculatorUserApi::ArithmeticCalculatorUserApi.Function::FunctionHandler",
+  "function-name": "ArithmeticCalculatorUserApi",
+  "package-type": "Zip",
+  "function-role": "arn:aws:iam::123456789012:role/service-role/your-lambda-role"
+}
