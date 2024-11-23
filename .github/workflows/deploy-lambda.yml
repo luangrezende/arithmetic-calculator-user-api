@@ -20,6 +20,22 @@ jobs:
         with:
           dotnet-version: 8.0
 
+      # Instalar AWS CLI
+      - name: Install AWS CLI
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y unzip
+          curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+          unzip awscliv2.zip
+          sudo ./aws/install
+
+      # Configurar credenciais da AWS
+      - name: Configure AWS credentials
+        run: |
+          aws configure set aws_access_key_id ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws configure set aws_secret_access_key ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws configure set region ${{ secrets.AWS_REGION }}
+
       # Instalar dependências
       - name: Restore dependencies
         run: dotnet restore
@@ -29,12 +45,8 @@ jobs:
         run: dotnet lambda package --output-package ./lambda-package.zip
 
       # Deploy para a AWS Lambda
-      - name: Deploy to AWS Lambda
-        uses: aws-actions/aws-lambda-deploy@v1
-        with:
-          function-name: ArithmeticCalculatorUserApi # Substitua pelo nome da sua Lambda
-          region: ${{ secrets.AWS_REGION }}
-          zip-file: ./lambda-package.zip
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      - name: Deploy Lambda function
+        run: |
+          aws lambda update-function-code \
+            --function-name ArithmeticCalculatorUserApi \
+            --zip-file fileb://lambda-package.zip
