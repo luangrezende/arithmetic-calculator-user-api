@@ -6,8 +6,8 @@
       "commandLineArgs": "--port 5050",
       "workingDirectory": ".\\bin\\$(Configuration)\\net8.0",
       "environmentVariables": {
-        "mysqlConnectionString": "yout-connection-string",
-        "jwtSecretKey": "yout-jwt-key"
+        "mysqlConnectionString": "Server=arithmetic-calculator-db.cbgygg4qiz1k.us-east-1.rds.amazonaws.com;Database=arithmetic-calculator-db;User=admin;Password=S6rHUkTGUyLtoP9AVAGD;",
+        "jwtSecretKey": "kw4-LUcRpIrSn9CbsqkpIGUCdzsOL6DafWMjrJiO8XcQ3bTahDspVthZogy6UpSoPIg8q7o-xupSuqEn3ZK3CA"
       }
     }
   }

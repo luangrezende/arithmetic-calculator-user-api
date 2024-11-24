@@ -1,6 +1,6 @@
 ﻿namespace ArithmeticCalculatorUserApi.Domain.Constants
 {
-    public static class ErrorMessages
+    public static class ApiResponseMessages
     {
         public const string MissingBody = "Request body cannot be null or empty.";
         public const string InvalidCredentials = "Invalid username or password.";
@@ -9,5 +9,9 @@
         public const string InvalidRequestBody = "Invalid request body.";
         public const string InvalidJsonFormat = "Invalid JSON format.";
         public const string MissingUsernameOrPassword = "Username and password are required.";
+        public const string UsernamePasswordNameRequired = "Username, password, and name are required.";
+        public const string UsernameAlreadyExists = "Username already exists.";
+        public const string ErrorCreatingUser = "Error creating the user.";
+        public const string UserCreatedSuccessfully = "User created successfully.";
     }
 }
