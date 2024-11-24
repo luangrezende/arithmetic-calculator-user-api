@@ -85,6 +85,11 @@ namespace ArithmeticCalculatorUserApi
 
         public APIGatewayProxyResponse FunctionHandler(APIGatewayProxyRequest request, ILambdaContext context)
         {
+            if (request.HttpMethod == "OPTIONS")
+            {
+                return BuildPreflightResponse();
+            }
+
             return request.HttpMethod switch
             {
                 "POST" when request.Path == "/login" => Login(request, context),
@@ -92,6 +97,21 @@ namespace ArithmeticCalculatorUserApi
                 _ => BuildResponse(HttpStatusCode.NotFound, new { error = ApiResponseMessages.EndpointNotFound }),
             };
         }
+
+        private APIGatewayProxyResponse BuildPreflightResponse()
+        {
+            return new APIGatewayProxyResponse
+            {
+                StatusCode = (int)HttpStatusCode.OK,
+                Headers = new Dictionary<string, string>
+                {
+                    { "Access-Control-Allow-Origin", "*" },
+                    { "Access-Control-Allow-Methods", "GET, POST, OPTIONS" },
+                    { "Access-Control-Allow-Headers", "Content-Type, Authorization" }
+                }
+            };
+        }
+
 
         private APIGatewayProxyResponse BuildResponse(HttpStatusCode statusCode, object body)
         {
