@@ -98,20 +98,24 @@ namespace ArithmeticCalculatorUserApi
             };
         }
 
+        private Dictionary<string, string> GetCorsHeaders()
+        {
+            return new Dictionary<string, string>
+            {
+                { "Access-Control-Allow-Origin", "*" },
+                { "Access-Control-Allow-Methods", "GET, POST, OPTIONS" },
+                { "Access-Control-Allow-Headers", "Content-Type, Authorization" }
+            };
+        }
+
         private APIGatewayProxyResponse BuildPreflightResponse()
         {
             return new APIGatewayProxyResponse
             {
                 StatusCode = (int)HttpStatusCode.OK,
-                Headers = new Dictionary<string, string>
-                {
-                    { "Access-Control-Allow-Origin", "*" },
-                    { "Access-Control-Allow-Methods", "GET, POST, OPTIONS" },
-                    { "Access-Control-Allow-Headers", "Content-Type, Authorization" }
-                }
+                Headers = GetCorsHeaders()
             };
         }
-
 
         private APIGatewayProxyResponse BuildResponse(HttpStatusCode statusCode, object body)
         {
@@ -119,10 +123,10 @@ namespace ArithmeticCalculatorUserApi
             {
                 StatusCode = (int)statusCode,
                 Body = System.Text.Json.JsonSerializer.Serialize(body),
-                Headers = new Dictionary<string, string>
+                Headers = GetCorsHeaders().Concat(new Dictionary<string, string>
                 {
                     { "Content-Type", "application/json" }
-                }
+                }).ToDictionary(kvp => kvp.Key, kvp => kvp.Value)
             };
         }
     }
