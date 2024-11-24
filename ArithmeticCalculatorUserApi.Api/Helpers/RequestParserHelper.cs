@@ -12,7 +12,7 @@ namespace ArithmeticCalculatorUserApi.Helpers
             if (string.IsNullOrEmpty(requestBody))
             {
                 parsedObject = default!;
-                errorResponse = ApiResponseHelper.CreateErrorResponse(HttpStatusCode.BadRequest, ErrorMessages.MissingBody);
+                errorResponse = ApiResponseHelper.CreateErrorResponse(HttpStatusCode.BadRequest, ApiResponseMessages.MissingBody);
                 return false;
             }
 
@@ -21,7 +21,7 @@ namespace ArithmeticCalculatorUserApi.Helpers
                 parsedObject = JsonSerializer.Deserialize<T>(requestBody)!;
                 if (parsedObject == null)
                 {
-                    errorResponse = ApiResponseHelper.CreateErrorResponse(HttpStatusCode.BadRequest, ErrorMessages.InvalidRequestBody);
+                    errorResponse = ApiResponseHelper.CreateErrorResponse(HttpStatusCode.BadRequest, ApiResponseMessages.InvalidRequestBody);
                     return false;
                 }
 
@@ -31,7 +31,7 @@ namespace ArithmeticCalculatorUserApi.Helpers
             catch (JsonException)
             {
                 parsedObject = default!;
-                errorResponse = ApiResponseHelper.CreateErrorResponse(HttpStatusCode.BadRequest, ErrorMessages.InvalidJsonFormat);
+                errorResponse = ApiResponseHelper.CreateErrorResponse(HttpStatusCode.BadRequest, ApiResponseMessages.InvalidJsonFormat);
                 return false;
             }
         }

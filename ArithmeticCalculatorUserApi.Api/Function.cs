@@ -29,80 +29,81 @@ namespace ArithmeticCalculatorUserApi
             _jwtTokenGenerator = new JwtTokenGenerator(jwtSecret!);
         }
 
-        public ApiResponse Login(APIGatewayProxyRequest request, ILambdaContext context)
+        public APIGatewayProxyResponse Login(APIGatewayProxyRequest request, ILambdaContext context)
         {
             if (!RequestParserHelper.TryParseRequest<TokenRequest>(request.Body, out var user, out var errorResponse))
             {
-                return errorResponse;
+                return BuildResponse(HttpStatusCode.BadRequest, errorResponse.Data!);
             }
 
             if (string.IsNullOrWhiteSpace(user.Username) || string.IsNullOrWhiteSpace(user.Password))
             {
-                return ApiResponseHelper.CreateErrorResponse(HttpStatusCode.BadRequest, ErrorMessages.MissingUsernameOrPassword);
+                return BuildResponse(HttpStatusCode.BadRequest, new { error = ApiResponseMessages.MissingUsernameOrPassword });
             }
 
             var result = _userRepository.Authenticate(user.Username, user.Password);
             if (!result.HasValue)
             {
-                return ApiResponseHelper.CreateErrorResponse(HttpStatusCode.Unauthorized, ErrorMessages.InvalidCredentials);
+                return BuildResponse(HttpStatusCode.Unauthorized, new { error = ApiResponseMessages.InvalidCredentials });
             }
 
             var (userId, username, status) = result.Value;
             var token = _jwtTokenGenerator.GenerateToken(userId, username, status);
 
-            return new ApiResponse
+            return BuildResponse(HttpStatusCode.OK, new TokenResponse
             {
-                StatusCode = (int)HttpStatusCode.OK,
-                Data = new TokenResponse
-                {
-                    Token = token,
-                    Validation = TokenExpirationHours * (int)TokenEnum.ExpirationTimeInSeconds
-                }
-            };
+                Token = token,
+                Validation = TokenExpirationHours * (int)TokenEnum.ExpirationTimeInSeconds
+            });
         }
 
-        public ApiResponse RegisterUser(APIGatewayProxyRequest request, ILambdaContext context)
+        public APIGatewayProxyResponse RegisterUser(APIGatewayProxyRequest request, ILambdaContext context)
         {
             if (!RequestParserHelper.TryParseRequest<UserCreationRequest>(request.Body, out var user, out var errorResponse))
             {
-                return errorResponse;
+                return BuildResponse(HttpStatusCode.BadRequest, errorResponse.Data!);
             }
 
             if (string.IsNullOrWhiteSpace(user.Username) || string.IsNullOrWhiteSpace(user.Password) || string.IsNullOrWhiteSpace(user.Name))
             {
-                return ApiResponseHelper.CreateErrorResponse(HttpStatusCode.BadRequest, "Username, password, and name are required.");
+                return BuildResponse(HttpStatusCode.BadRequest, new { error = ApiResponseMessages.UsernamePasswordNameRequired });
             }
 
-            // Check if the user already exists
             if (_userRepository.UserExists(user.Username))
             {
-                return ApiResponseHelper.CreateErrorResponse(HttpStatusCode.Conflict, "Username already exists.");
+                return BuildResponse(HttpStatusCode.Conflict, new { error = ApiResponseMessages.UsernameAlreadyExists });
             }
 
-            // Create the user
             var created = _userRepository.CreateUser(user.Username, user.Password, user.Name);
             if (!created)
             {
-                return ApiResponseHelper.CreateErrorResponse(HttpStatusCode.InternalServerError, "Error creating the user.");
+                return BuildResponse(HttpStatusCode.InternalServerError, new { error = ApiResponseMessages.ErrorCreatingUser });
             }
 
-            return new ApiResponse
-            {
-                StatusCode = (int)HttpStatusCode.Created,
-                Data = new { message = "User created successfully." }
-            };
+            return BuildResponse(HttpStatusCode.Created, new { message = ApiResponseMessages.UserCreatedSuccessfully });
         }
 
-
-        public ApiResponse FunctionHandler(APIGatewayProxyRequest request, ILambdaContext context)
+        public APIGatewayProxyResponse FunctionHandler(APIGatewayProxyRequest request, ILambdaContext context)
         {
             return request.HttpMethod switch
             {
                 "POST" when request.Path == "/login" => Login(request, context),
                 "POST" when request.Path == "/register" => RegisterUser(request, context),
-                _ => ApiResponseHelper.CreateErrorResponse(HttpStatusCode.NotFound, ErrorMessages.EndpointNotFound),
+                _ => BuildResponse(HttpStatusCode.NotFound, new { error = ApiResponseMessages.EndpointNotFound }),
             };
         }
 
+        private APIGatewayProxyResponse BuildResponse(HttpStatusCode statusCode, object body)
+        {
+            return new APIGatewayProxyResponse
+            {
+                StatusCode = (int)statusCode,
+                Body = System.Text.Json.JsonSerializer.Serialize(body),
+                Headers = new Dictionary<string, string>
+                {
+                    { "Content-Type", "application/json" }
+                }
+            };
+        }
     }
 }
