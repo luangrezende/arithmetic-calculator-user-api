@@ -88,14 +88,14 @@ namespace ArithmeticCalculatorUserApi.Infrastructure.Repositories
             }
         }
 
-        public AuthenticateUser? GetUserById(int userId)
+        public AuthenticateUser? GetUserById(Guid userId)
         {
             try
             {
                 using var connection = new MySqlConnection(_connectionString);
                 connection.Open();
 
-                const string query = "SELECT Id, Username, Status, Name, Email FROM User WHERE Username = @UserId";
+                const string query = "SELECT Id, Username, Status, Name, Username FROM User WHERE Id = @UserId";
                 using var cmd = new MySqlCommand(query, connection);
                 cmd.Parameters.AddWithValue("@UserId", userId);
 
@@ -108,7 +108,7 @@ namespace ArithmeticCalculatorUserApi.Infrastructure.Repositories
                         Username = reader.GetString("Username"),
                         Status = reader.GetString("Status"),
                         Name = reader.GetString("Name"),
-                        Email = reader.GetString("Email"),
+                        Email = reader.GetString("Username"),
 
                     };
                 }

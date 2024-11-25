@@ -1,6 +1,6 @@
 ﻿using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
+using System.Text;
 
 namespace ArithmeticCalculatorUserApi.Infrastructure.Security
 {
@@ -13,34 +13,32 @@ namespace ArithmeticCalculatorUserApi.Infrastructure.Security
             _secretKey = secretKey;
         }
 
-        public bool ValidateToken(string token, out int userId)
+        public bool ValidateToken(string token, out Guid userId)
         {
-            userId = 0;
-
+            userId = Guid.Empty;
             var tokenHandler = new JwtSecurityTokenHandler();
-            var key = Convert.FromBase64String(_secretKey);
 
-            try
+            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_secretKey));
+            var validationParameters = new TokenValidationParameters
             {
-                var claims = tokenHandler.ValidateToken(token, new TokenValidationParameters
-                {
-                    ValidateIssuerSigningKey = true,
-                    IssuerSigningKey = new SymmetricSecurityKey(key),
-                    ValidateIssuer = false,
-                    ValidateAudience = false,
-                    ClockSkew = TimeSpan.Zero
-                }, out var validatedToken);
+                ValidateIssuerSigningKey = true,
+                IssuerSigningKey = key,
+                ValidateIssuer = false,
+                ValidateAudience = false,
+                ClockSkew = TimeSpan.Zero
+            };
 
-                if (validatedToken is JwtSecurityToken jwtToken &&
-                    jwtToken.Header.Alg.Equals(SecurityAlgorithms.HmacSha256, StringComparison.InvariantCultureIgnoreCase))
+            var claimsPrincipal = tokenHandler.ValidateToken(token, validationParameters, out var validatedToken);
+
+            if (validatedToken is JwtSecurityToken jwtToken)
+            {
+                var userIdClaim = jwtToken.Claims.FirstOrDefault(c => c.Type == "id");
+
+                if (userIdClaim != null && Guid.TryParse(userIdClaim.Value, out var parsedUserId))
                 {
-                    userId = int.Parse(claims.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+                    userId = parsedUserId;
                     return true;
                 }
-            }
-            catch
-            {
-                return false;
             }
 
             return false;
