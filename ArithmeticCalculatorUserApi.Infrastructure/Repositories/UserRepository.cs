@@ -1,5 +1,5 @@
-﻿using System;
-using System.Data;
+﻿using System.Data;
+using ArithmeticCalculatorUserApi.Domain.Models;
 using ArithmeticCalculatorUserApi.Domain.Repositories;
 using MySql.Data.MySqlClient;
 
@@ -14,7 +14,7 @@ namespace ArithmeticCalculatorUserApi.Infrastructure.Repositories
             _connectionString = connectionString;
         }
 
-        public (int userId, string username, string status)? Authenticate(string username, string password)
+        public AuthenticateUser? Authenticate(string username, string password)
         {
             try
             {
@@ -29,7 +29,12 @@ namespace ArithmeticCalculatorUserApi.Infrastructure.Repositories
                 using var reader = cmd.ExecuteReader();
                 if (reader.Read())
                 {
-                    return (reader.GetInt32("Id"), reader.GetString("Username"), reader.GetString("Status"));
+                    return new AuthenticateUser
+                    {
+                        Id = reader.GetGuid("Id"),
+                        Username = reader.GetString("Username"),
+                        Status = reader.GetString("Status"),
+                    };
                 }
             }
             catch (Exception ex)
@@ -67,8 +72,10 @@ namespace ArithmeticCalculatorUserApi.Infrastructure.Repositories
                 using var connection = new MySqlConnection(_connectionString);
                 connection.Open();
 
-                const string query = "INSERT INTO User (Username, Password, Name) VALUES (@Username, @Password, @Name)";
+                const string query = "INSERT INTO User (Id, Username, Password, Name) VALUES (@Id, @Username, @Password, @Name)";
                 using var cmd = new MySqlCommand(query, connection);
+
+                cmd.Parameters.AddWithValue("@Id", Guid.NewGuid());
                 cmd.Parameters.AddWithValue("@Username", username);
                 cmd.Parameters.AddWithValue("@Password", password); // Substituir por hash em produção.
                 cmd.Parameters.AddWithValue("@Name", name);
@@ -81,5 +88,37 @@ namespace ArithmeticCalculatorUserApi.Infrastructure.Repositories
             }
         }
 
+        public AuthenticateUser? GetUserById(int userId)
+        {
+            try
+            {
+                using var connection = new MySqlConnection(_connectionString);
+                connection.Open();
+
+                const string query = "SELECT Id, Username, Status, Name, Email FROM User WHERE Username = @UserId";
+                using var cmd = new MySqlCommand(query, connection);
+                cmd.Parameters.AddWithValue("@UserId", userId);
+
+                using var reader = cmd.ExecuteReader();
+                if (reader.Read())
+                {
+                    return new AuthenticateUser
+                    {
+                        Id = reader.GetGuid("Id"),
+                        Username = reader.GetString("Username"),
+                        Status = reader.GetString("Status"),
+                        Name = reader.GetString("Name"),
+                        Email = reader.GetString("Email"),
+
+                    };
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new DataException("Error during database operation.", ex);
+            }
+
+            return null;
+        }
     }
 }
