@@ -1,4 +1,7 @@
 using System.Net;
+using System.Text.Json;
+using System.Text.Json.Nodes;
+using System.Text.Json.Serialization;
 using Amazon.Lambda.APIGatewayEvents;
 using Amazon.Lambda.Core;
 using ArithmeticCalculatorUserApi.Domain.Constants;
@@ -32,13 +35,13 @@ namespace ArithmeticCalculatorUserApi
 
         public APIGatewayProxyResponse GetProfile(APIGatewayProxyRequest request, ILambdaContext context)
         {
-            context.Logger.LogLine($"Request Body: {request.Body}");
-            context.Logger.LogLine($"Request Body: {request.Headers}");
-
             try
             {
+                context.Logger.LogLine($"GetProfile: {JsonSerializer.Serialize(request)}");
+
                 if (!request.Headers.TryGetValue("Authorization", out var authorization) || string.IsNullOrWhiteSpace(authorization))
                 {
+                    context.Logger.LogLine($"Request header: {authorization}");
                     return BuildResponse(HttpStatusCode.Unauthorized, new { error = "Missing or invalid token" });
                 }
 
