@@ -10,8 +10,9 @@
         public const string InvalidJsonFormat = "Invalid JSON format.";
         public const string MissingUsernameOrPassword = "Username and password are required.";
         public const string UsernamePasswordNameRequired = "Username, password, and name are required.";
-        public const string UsernameAlreadyExists = "Username already exists.";
+        public const string UsernameAlreadyExists = "This email is already registered. Please use another email.";
         public const string ErrorCreatingUser = "Error creating the user.";
         public const string UserCreatedSuccessfully = "User created successfully.";
+        public const string UserInactive = "The user account is inactive.";
     }
 }
