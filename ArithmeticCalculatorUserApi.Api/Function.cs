@@ -129,6 +129,8 @@ namespace ArithmeticCalculatorUserApi
 
         public APIGatewayProxyResponse FunctionHandler(APIGatewayProxyRequest request, ILambdaContext context)
         {
+            context.Logger.LogInformation(request.Path);
+
             if (request.HttpMethod == "OPTIONS")
             {
                 return BuildPreflightResponse();
