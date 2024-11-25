@@ -33,6 +33,7 @@ namespace ArithmeticCalculatorUserApi
         public APIGatewayProxyResponse GetProfile(APIGatewayProxyRequest request, ILambdaContext context)
         {
             context.Logger.LogLine($"Request Body: {request.Body}");
+            context.Logger.LogLine($"Request Body: {request.Headers}");
 
             try
             {
