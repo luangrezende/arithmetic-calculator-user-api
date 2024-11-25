@@ -108,8 +108,6 @@ namespace ArithmeticCalculatorUserApi.Infrastructure.Repositories
                         Username = reader.GetString("Username"),
                         Status = reader.GetString("Status"),
                         Name = reader.GetString("Name"),
-                        Email = reader.GetString("Username"),
-
                     };
                 }
             }
