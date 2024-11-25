@@ -6,6 +6,7 @@ using Amazon.Lambda.APIGatewayEvents;
 using Amazon.Lambda.Core;
 using ArithmeticCalculatorUserApi.Domain.Constants;
 using ArithmeticCalculatorUserApi.Domain.Enums;
+using ArithmeticCalculatorUserApi.Domain.Models;
 using ArithmeticCalculatorUserApi.Domain.Models.Request;
 using ArithmeticCalculatorUserApi.Domain.Models.Response;
 using ArithmeticCalculatorUserApi.Domain.Repositories;
@@ -57,12 +58,12 @@ namespace ArithmeticCalculatorUserApi
                     return BuildResponse(HttpStatusCode.NotFound, new { error = "User not found" });
                 }
 
-                return BuildResponse(HttpStatusCode.OK, new
+                return BuildResponse(HttpStatusCode.OK, new AuthenticateUser
                 {
-                    user.Id,
-                    user.Username,
-                    user.Name,
-                    user.Status
+                    Id = user.Id,
+                    Username = user.Username,
+                    Name = user.Name,
+                    Status = user.Status
                 });
             }
             catch (Exception ex)
