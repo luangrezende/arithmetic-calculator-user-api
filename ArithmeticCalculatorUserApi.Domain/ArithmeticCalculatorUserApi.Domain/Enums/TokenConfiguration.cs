@@ -1,6 +1,6 @@
 ﻿namespace ArithmeticCalculatorUserApi.Domain.Enums
 {
-    public enum TokenEnum
+    public enum TokenConfiguration
     {
         ExpirationTimeInSeconds = 3600
     }

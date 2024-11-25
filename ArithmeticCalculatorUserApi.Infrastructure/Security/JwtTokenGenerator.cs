@@ -1,6 +1,7 @@
 ﻿using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
+using ArithmeticCalculatorUserApi.Domain.Enums;
 using Microsoft.IdentityModel.Tokens;
 
 namespace ArithmeticCalculatorUserApi.Infrastructure.Security
@@ -31,7 +32,7 @@ namespace ArithmeticCalculatorUserApi.Infrastructure.Security
                 issuer: "arithmetic-calculator",
                 audience: "arithmetic-calculator",
                 claims: claims,
-                expires: DateTime.UtcNow.AddHours(2),
+                expires: DateTime.UtcNow.AddSeconds((int)TokenConfiguration.ExpirationTimeInSeconds),
                 signingCredentials: credentials);
 
             return new JwtSecurityTokenHandler().WriteToken(token);

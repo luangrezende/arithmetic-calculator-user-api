@@ -18,7 +18,6 @@ namespace ArithmeticCalculatorUserApi
     {
         private readonly IUserRepository _userRepository;
         private readonly JwtTokenGenerator _jwtTokenGenerator;
-        private const int TokenExpirationHours = 2;
 
         public Function()
         {
@@ -48,14 +47,21 @@ namespace ArithmeticCalculatorUserApi
             }
 
             var (userId, username, status) = result.Value;
+
+            if (!status.Equals(UserStatus.Active.ToString(), StringComparison.CurrentCultureIgnoreCase))
+            {
+                return BuildResponse(HttpStatusCode.Forbidden, new { error = ApiResponseMessages.UserInactive });
+            }
+
             var token = _jwtTokenGenerator.GenerateToken(userId, username, status);
 
             return BuildResponse(HttpStatusCode.OK, new TokenResponse
             {
                 Token = token,
-                Validation = TokenExpirationHours * (int)TokenEnum.ExpirationTimeInSeconds
+                Validation = (int)TokenConfiguration.ExpirationTimeInSeconds
             });
         }
+
 
         public APIGatewayProxyResponse RegisterUser(APIGatewayProxyRequest request, ILambdaContext context)
         {
@@ -92,7 +98,7 @@ namespace ArithmeticCalculatorUserApi
 
             return request.HttpMethod switch
             {
-                "POST" when request.Path == "/login" => Login(request, context),
+                "POST" when request.Path == "/user/login" => Login(request, context),
                 "POST" when request.Path == "/register" => RegisterUser(request, context),
                 _ => BuildResponse(HttpStatusCode.NotFound, new { error = ApiResponseMessages.EndpointNotFound }),
             };
