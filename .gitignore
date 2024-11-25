@@ -1,3 +1,5 @@
+**/Properties/launchSettings.json
+
 # Visual Studio 2022
 .vs/
 *.user
