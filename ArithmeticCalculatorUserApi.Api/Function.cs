@@ -135,9 +135,9 @@ namespace ArithmeticCalculatorUserApi
 
             return request.HttpMethod switch
             {
-                "POST" when request.Path == $"user/login" => Login(request, context),
-                "POST" when request.Path == $"user/register" => RegisterUser(request, context),
-                "GET" when request.Path == $"user/profile" => GetProfile(request, context),
+                "POST" when request.Path == $"/user/login" => Login(request, context),
+                "POST" when request.Path == $"/user/register" => RegisterUser(request, context),
+                "GET" when request.Path == $"/user/profile" => GetProfile(request, context),
                 _ => BuildResponse(HttpStatusCode.NotFound, new { error = ApiResponseMessages.EndpointNotFound }),
             };
         }
