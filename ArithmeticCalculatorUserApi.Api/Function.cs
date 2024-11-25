@@ -32,7 +32,8 @@ namespace ArithmeticCalculatorUserApi
 
         public APIGatewayProxyResponse GetProfile(APIGatewayProxyRequest request, ILambdaContext context)
         {
-            context.Logger.LogInformation("working");
+            context.Logger.LogLine($"Request Body: {request.Body}");
+            context.Logger.LogLine($"Request Body: {request.Headers}");
 
             try
             {
@@ -129,8 +130,6 @@ namespace ArithmeticCalculatorUserApi
 
         public APIGatewayProxyResponse FunctionHandler(APIGatewayProxyRequest request, ILambdaContext context)
         {
-            context.Logger.LogInformation(request.Path);
-
             if (request.HttpMethod == "OPTIONS")
             {
                 return BuildPreflightResponse();
