@@ -10,7 +10,7 @@ namespace ArithmeticCalculatorUserApi.Domain.Repositories
 
         bool CreateUser(string username, string password, string name);
 
-        AuthenticateUser? GetUserById(int userId);
+        AuthenticateUser? GetUserById(Guid userId);
     }
 }
 

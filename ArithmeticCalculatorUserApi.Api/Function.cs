@@ -27,7 +27,7 @@ namespace ArithmeticCalculatorUserApi
 
             _userRepository = new UserRepository(connectionString!);
             _jwtTokenGenerator = new JwtTokenGenerator(jwtSecret!);
-            _jwtTokenGenerator = new JwtTokenGenerator(jwtSecret!);
+            _jwtTokenValidator = new JwtTokenValidator(jwtSecret!);
         }
 
         public APIGatewayProxyResponse GetProfile(APIGatewayProxyRequest request, ILambdaContext context)
@@ -100,7 +100,7 @@ namespace ArithmeticCalculatorUserApi
         }
 
 
-        public APIGatewayProxyResponse RegisterUser(APIGatewayProxyRequest request, ILambdaContext context)
+        public APIGatewayProxyResponse Register(APIGatewayProxyRequest request, ILambdaContext context)
         {
             if (!RequestParserHelper.TryParseRequest<UserCreationRequest>(request.Body, out var user, out var errorResponse))
             {
@@ -135,9 +135,9 @@ namespace ArithmeticCalculatorUserApi
 
             return request.HttpMethod switch
             {
-                "POST" when request.Path == $"/user/login" => Login(request, context),
-                "POST" when request.Path == $"/user/register" => RegisterUser(request, context),
-                "GET" when request.Path == $"/user/profile" => GetProfile(request, context),
+                "POST" when request.Path == "/user/login" => Login(request, context),
+                "POST" when request.Path == "/user/register" => Register(request, context),
+                "GET" when request.Path == "/user/profile" => GetProfile(request, context),
                 _ => BuildResponse(HttpStatusCode.NotFound, new { error = ApiResponseMessages.EndpointNotFound }),
             };
         }
