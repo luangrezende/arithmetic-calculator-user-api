@@ -32,6 +32,8 @@ namespace ArithmeticCalculatorUserApi
 
         public APIGatewayProxyResponse GetProfile(APIGatewayProxyRequest request, ILambdaContext context)
         {
+            context.Logger.LogInformation("working");
+
             try
             {
                 if (!request.Headers.TryGetValue("Authorization", out var authorization) || string.IsNullOrWhiteSpace(authorization))
@@ -56,7 +58,6 @@ namespace ArithmeticCalculatorUserApi
                     user.Id,
                     user.Username,
                     user.Name,
-                    user.Email,
                     user.Status
                 });
             }
