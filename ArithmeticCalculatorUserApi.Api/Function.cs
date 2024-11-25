@@ -18,6 +18,7 @@ namespace ArithmeticCalculatorUserApi
     {
         private readonly IUserRepository _userRepository;
         private readonly JwtTokenGenerator _jwtTokenGenerator;
+        private readonly JwtTokenValidator _jwtTokenValidator;
 
         public Function()
         {
@@ -26,6 +27,44 @@ namespace ArithmeticCalculatorUserApi
 
             _userRepository = new UserRepository(connectionString!);
             _jwtTokenGenerator = new JwtTokenGenerator(jwtSecret!);
+            _jwtTokenGenerator = new JwtTokenGenerator(jwtSecret!);
+        }
+
+        public APIGatewayProxyResponse GetProfile(APIGatewayProxyRequest request, ILambdaContext context)
+        {
+            try
+            {
+                if (!request.Headers.TryGetValue("Authorization", out var authorization) || string.IsNullOrWhiteSpace(authorization))
+                {
+                    return BuildResponse(HttpStatusCode.Unauthorized, new { error = "Missing or invalid token" });
+                }
+
+                var token = authorization.Replace("Bearer ", "", StringComparison.OrdinalIgnoreCase);
+                if (!_jwtTokenValidator.ValidateToken(token, out var userId))
+                {
+                    return BuildResponse(HttpStatusCode.Unauthorized, new { error = "Invalid token" });
+                }
+
+                var user = _userRepository.GetUserById(userId);
+                if (user == null)
+                {
+                    return BuildResponse(HttpStatusCode.NotFound, new { error = "User not found" });
+                }
+
+                return BuildResponse(HttpStatusCode.OK, new
+                {
+                    user.Id,
+                    user.Username,
+                    user.Name,
+                    user.Email,
+                    user.Status
+                });
+            }
+            catch (Exception ex)
+            {
+                context.Logger.LogLine($"Error: {ex.Message}");
+                return BuildResponse(HttpStatusCode.InternalServerError, new { error = "An unexpected error occurred" });
+            }
         }
 
         public APIGatewayProxyResponse Login(APIGatewayProxyRequest request, ILambdaContext context)
@@ -41,19 +80,17 @@ namespace ArithmeticCalculatorUserApi
             }
 
             var result = _userRepository.Authenticate(user.Username, user.Password);
-            if (!result.HasValue)
+            if (result == null)
             {
                 return BuildResponse(HttpStatusCode.Unauthorized, new { error = ApiResponseMessages.InvalidCredentials });
             }
 
-            var (userId, username, status) = result.Value;
-
-            if (!status.Equals(UserStatus.Active.ToString(), StringComparison.CurrentCultureIgnoreCase))
+            if (!result.Status.Equals(UserStatus.Active.ToString(), StringComparison.CurrentCultureIgnoreCase))
             {
                 return BuildResponse(HttpStatusCode.Forbidden, new { error = ApiResponseMessages.UserInactive });
             }
 
-            var token = _jwtTokenGenerator.GenerateToken(userId, username, status);
+            var token = _jwtTokenGenerator.GenerateToken(result);
 
             return BuildResponse(HttpStatusCode.OK, new TokenResponse
             {
@@ -98,8 +135,9 @@ namespace ArithmeticCalculatorUserApi
 
             return request.HttpMethod switch
             {
-                "POST" when request.Path == "/user/login" => Login(request, context),
-                "POST" when request.Path == "/register" => RegisterUser(request, context),
+                "POST" when request.Path == $"{ApiConfigurations.ApiPrefix}/login" => Login(request, context),
+                "POST" when request.Path == $"{ApiConfigurations.ApiPrefix}/register" => RegisterUser(request, context),
+                "GET" when request.Path == $"{ApiConfigurations.ApiPrefix}/user-profile" => GetProfile(request, context),
                 _ => BuildResponse(HttpStatusCode.NotFound, new { error = ApiResponseMessages.EndpointNotFound }),
             };
         }

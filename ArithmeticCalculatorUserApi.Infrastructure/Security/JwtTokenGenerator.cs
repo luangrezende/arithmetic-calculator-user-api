@@ -2,6 +2,7 @@
 using System.Security.Claims;
 using System.Text;
 using ArithmeticCalculatorUserApi.Domain.Enums;
+using ArithmeticCalculatorUserApi.Domain.Models;
 using Microsoft.IdentityModel.Tokens;
 
 namespace ArithmeticCalculatorUserApi.Infrastructure.Security
@@ -15,16 +16,16 @@ namespace ArithmeticCalculatorUserApi.Infrastructure.Security
             _jwtSecret = jwtSecret;
         }
 
-        public string GenerateToken(int userId, string username, string status)
+        public string GenerateToken(AuthenticateUser user)
         {
             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtSecret));
             var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
             var claims = new[]
             {
-                new Claim(JwtRegisteredClaimNames.Sub, username),
-                new Claim("id", userId.ToString()),
-                new Claim("status", status),
+                new Claim(JwtRegisteredClaimNames.Sub, user.Username),
+                new Claim("id", user.Id.ToString()),
+                new Claim("status", user.Status),
                 new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
             };
 
