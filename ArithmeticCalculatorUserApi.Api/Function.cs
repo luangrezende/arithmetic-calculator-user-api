@@ -5,6 +5,7 @@ using Amazon.Lambda.Core;
 using ArithmeticCalculatorUserApi.Domain.Constants;
 using ArithmeticCalculatorUserApi.Domain.Enums;
 using ArithmeticCalculatorUserApi.Domain.Models.Request;
+using ArithmeticCalculatorUserApi.Domain.Models.Response;
 using ArithmeticCalculatorUserApi.Domain.Repositories;
 using ArithmeticCalculatorUserApi.Domain.Services;
 using ArithmeticCalculatorUserApi.Domain.Services.Interfaces;
@@ -37,7 +38,7 @@ public class Function
         services.AddScoped<IBankAccountService, BankAccountService>();
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IBankAccountRepository, BankAccountRepository>();
-        services.AddScoped<JwtTokenGenerator>(sp => new JwtTokenGenerator(Environment.GetEnvironmentVariable("jwtSecretKey")!));
+        services.AddScoped(sp => new JwtTokenGenerator(Environment.GetEnvironmentVariable("jwtSecretKey")!));
     }
 
     public async Task<APIGatewayProxyResponse> FunctionHandler(APIGatewayProxyRequest request, ILambdaContext context)
@@ -61,8 +62,8 @@ public class Function
         var userService = _serviceProvider.GetRequiredService<IUserService>();
         var jwtTokenGenerator = _serviceProvider.GetRequiredService<JwtTokenGenerator>();
 
-        if (!RequestParserHelper.TryParseRequest<TokenRequest>(request.Body, out var user, out var errorResponse))
-            return BuildResponse(HttpStatusCode.BadRequest, errorResponse.Data!);
+        if (!RequestParserHelper.TryParseRequest<TokenRequest>(request.Body, out var user, out var errorMessage))
+            return BuildResponse(HttpStatusCode.BadRequest, errorMessage!);
 
         if (string.IsNullOrWhiteSpace(user.Username) || string.IsNullOrWhiteSpace(user.Password))
             return BuildResponse(HttpStatusCode.BadRequest, new { error = ApiResponseMessages.MissingUsernameOrPassword });
@@ -76,15 +77,19 @@ public class Function
 
         var token = jwtTokenGenerator.GenerateToken(result);
 
-        return BuildResponse(HttpStatusCode.OK, new { Token = token, Expiration = (int)TokenConfiguration.ExpirationTimeInSeconds });
+        return BuildResponse(HttpStatusCode.OK, new TokenResponse
+        {
+            Token = token,
+            Expiration = (int)TokenConfiguration.ExpirationTimeInSeconds,
+        });
     }
 
     private async Task<APIGatewayProxyResponse> Register(APIGatewayProxyRequest request)
     {
         var userService = _serviceProvider.GetRequiredService<IUserService>();
 
-        if (!RequestParserHelper.TryParseRequest<UserCreationRequest>(request.Body, out var user, out var errorResponse))
-            return BuildResponse(HttpStatusCode.BadRequest, errorResponse.Data!);
+        if (!RequestParserHelper.TryParseRequest<UserCreationRequest>(request.Body, out var user, out var errorMessage))
+            return BuildResponse(HttpStatusCode.BadRequest, errorMessage!);
 
         if (string.IsNullOrWhiteSpace(user.Username) || string.IsNullOrWhiteSpace(user.Password) || string.IsNullOrWhiteSpace(user.Name))
             return BuildResponse(HttpStatusCode.BadRequest, new { error = ApiResponseMessages.UsernamePasswordNameRequired });
@@ -112,7 +117,13 @@ public class Function
 
         var accounts = await bankAccountService.GetBankAccountsByUserIdAsync(userId);
 
-        return BuildResponse(HttpStatusCode.OK, new { user.Id, user.Username, user.Name, user.Status, Accounts = accounts });
+        return BuildResponse(HttpStatusCode.OK, new UserProfileResponse 
+        { 
+            Id = user.Id, 
+            Username = user.Username,
+            Name = user.Name, 
+            Status = user.Status, 
+            Accounts = accounts });
     }
 
     private async Task<APIGatewayProxyResponse> AddBalance(APIGatewayProxyRequest request)
@@ -122,10 +133,10 @@ public class Function
         if (!TryValidateToken(request, out var userId))
             return BuildResponse(HttpStatusCode.Unauthorized, new { error = ApiResponseMessages.InvalidToken });
 
-        if (!RequestParserHelper.TryParseRequest<AddBalanceRequest>(request.Body, out var addBalanceRequest, out var errorResponse))
-            return BuildResponse(HttpStatusCode.BadRequest, errorResponse.Data!);
+        if (!RequestParserHelper.TryParseRequest<AddBalanceRequest>(request.Body, out var addBalanceRequest, out var errorMessage))
+            return BuildResponse(HttpStatusCode.BadRequest, errorMessage!);
 
-        if (!await bankAccountService.AccountBelongsToUserAsync(addBalanceRequest.AccountId, userId))
+        if (!await bankAccountService.AccountBelongsToUserAsync(addBalanceRequest!.AccountId, userId))
             return BuildResponse(HttpStatusCode.Forbidden, new { error = ApiResponseMessages.AccountNotBelongToUser });
 
         if (!await bankAccountService.AddBalanceAsync(addBalanceRequest.AccountId, addBalanceRequest.Amount))
@@ -141,10 +152,10 @@ public class Function
         if (!TryValidateToken(request, out var userId))
             return BuildResponse(HttpStatusCode.Unauthorized, new { error = ApiResponseMessages.InvalidToken });
 
-        if (!RequestParserHelper.TryParseRequest<DebitBalanceRequest>(request.Body, out var debitBalanceRequest, out var errorResponse))
-            return BuildResponse(HttpStatusCode.BadRequest, errorResponse.Data!);
+        if (!RequestParserHelper.TryParseRequest<DebitBalanceRequest>(request.Body, out var debitBalanceRequest, out var errorMessage))
+            return BuildResponse(HttpStatusCode.BadRequest, errorMessage!);
 
-        if (!await bankAccountService.AccountBelongsToUserAsync(debitBalanceRequest.AccountId, userId))
+        if (!await bankAccountService.AccountBelongsToUserAsync(debitBalanceRequest!.AccountId, userId))
             return BuildResponse(HttpStatusCode.Forbidden, new { error = ApiResponseMessages.AccountNotBelongToUser });
 
         if (!await bankAccountService.DebitBalanceAsync(debitBalanceRequest.AccountId, debitBalanceRequest.Amount))
@@ -166,18 +177,23 @@ public class Function
     }
 
     private APIGatewayProxyResponse BuildPreflightResponse() =>
-        new APIGatewayProxyResponse
+        new()
         {
             StatusCode = (int)HttpStatusCode.OK,
             Headers = GetCorsHeaders()
         };
 
     private APIGatewayProxyResponse BuildResponse(HttpStatusCode statusCode, object body) =>
-        new APIGatewayProxyResponse
+        new()
         {
             StatusCode = (int)statusCode,
-            Body = JsonSerializer.Serialize(body),
-            Headers = GetCorsHeaders()
+            Headers = GetCorsHeaders(),
+            Body = JsonSerializer.Serialize(
+                new ApiResponse
+                {
+                    Data = body,
+                    StatusCode = (int)HttpStatusCode.OK,
+                }),
         };
 
     private Dictionary<string, string> GetCorsHeaders() =>

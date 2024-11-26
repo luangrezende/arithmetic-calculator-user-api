@@ -1,37 +1,36 @@
-﻿using System.Net;
-using System.Text.Json;
+﻿using System.Text.Json;
 using ArithmeticCalculatorUserApi.Domain.Constants;
-using ArithmeticCalculatorUserApi.Domain.Models.Response;
 
 namespace ArithmeticCalculatorUserApi.Helpers
 {
     public static class RequestParserHelper
     {
-        public static bool TryParseRequest<T>(string requestBody, out T parsedObject, out ApiResponse errorResponse)
+        public static bool TryParseRequest<T>(string requestBody, out T? parsedObject, out string? errorMessage)
         {
-            if (string.IsNullOrEmpty(requestBody))
+            if (string.IsNullOrWhiteSpace(requestBody))
             {
-                parsedObject = default!;
-                errorResponse = ApiResponseHelper.CreateErrorResponse(HttpStatusCode.BadRequest, ApiResponseMessages.MissingBody);
+                parsedObject = default;
+                errorMessage = ApiResponseMessages.MissingBody;
                 return false;
             }
 
             try
             {
-                parsedObject = JsonSerializer.Deserialize<T>(requestBody)!;
+                parsedObject = JsonSerializer.Deserialize<T>(requestBody);
+
                 if (parsedObject == null)
                 {
-                    errorResponse = ApiResponseHelper.CreateErrorResponse(HttpStatusCode.BadRequest, ApiResponseMessages.InvalidRequestBody);
+                    errorMessage = ApiResponseMessages.InvalidRequestBody;
                     return false;
                 }
 
-                errorResponse = null!;
+                errorMessage = null;
                 return true;
             }
             catch (JsonException)
             {
-                parsedObject = default!;
-                errorResponse = ApiResponseHelper.CreateErrorResponse(HttpStatusCode.BadRequest, ApiResponseMessages.InvalidJsonFormat);
+                parsedObject = default;
+                errorMessage = ApiResponseMessages.InvalidJsonFormat;
                 return false;
             }
         }

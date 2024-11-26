@@ -7,7 +7,7 @@ namespace ArithmeticCalculatorUserApi.Domain.Models.Response
         [JsonPropertyName("token")]
         public string Token { get; set; }
 
-        [JsonPropertyName("validation")]
-        public int Validation { get; set; }
+        [JsonPropertyName("expiration")]
+        public int Expiration { get; set; }
     }
 }
