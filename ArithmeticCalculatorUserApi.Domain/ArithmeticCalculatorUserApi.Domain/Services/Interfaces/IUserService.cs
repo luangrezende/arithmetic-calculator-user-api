@@ -1,10 +1,11 @@
 ﻿using ArithmeticCalculatorUserApi.Domain.Models;
+using ArithmeticCalculatorUserApi.Domain.Models.DTO;
 
-namespace ArithmeticCalculatorUserApi.Domain.Repositories
+namespace ArithmeticCalculatorUserApi.Domain.Services.Interfaces
 {
-    public interface IUserRepository
+    public interface IUserService
     {
-        Task<User?> AuthenticateAsync(string username, string password);
+        Task<UserAutheticateDTO?> AuthenticateAsync(string username, string password);
 
         Task<bool> UserExistsAsync(string username);
 
@@ -13,4 +14,3 @@ namespace ArithmeticCalculatorUserApi.Domain.Repositories
         Task<User?> GetUserByIdAsync(Guid userId);
     }
 }
-

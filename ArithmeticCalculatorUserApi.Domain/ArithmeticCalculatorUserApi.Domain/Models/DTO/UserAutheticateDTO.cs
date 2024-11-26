@@ -1,8 +1,8 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace ArithmeticCalculatorUserApi.Domain.Models
+namespace ArithmeticCalculatorUserApi.Domain.Models.DTO
 {
-    public class User
+    public class UserAutheticateDTO
     {
         [JsonPropertyName("id")]
         public Guid Id { get; set; }
@@ -15,9 +15,6 @@ namespace ArithmeticCalculatorUserApi.Domain.Models
 
         [JsonPropertyName("status")]
         public string Status { get; set; }
-
-        [JsonPropertyName("password")]
-        public string Password { get; set; }
 
         [JsonPropertyName("accounts")]
         public IEnumerable<BankAccount> Accounts { get; set; }

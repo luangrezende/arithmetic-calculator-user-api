@@ -9,7 +9,7 @@ namespace ArithmeticCalculatorUserApi.Domain.Models
         public Guid Id { get; set; }
 
         [JsonPropertyName("accountType")]
-        public AccountType AccountType { get; set; }
+        public string AccountType { get; set; }
 
         [JsonPropertyName("balance")]
         public decimal Balance { get; set; }
