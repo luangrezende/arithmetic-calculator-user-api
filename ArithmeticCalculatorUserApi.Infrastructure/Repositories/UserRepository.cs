@@ -36,10 +36,14 @@ namespace ArithmeticCalculatorUserApi.Infrastructure.Repositories
         public async Task<bool> UserExistsAsync(string username)
         {
             const string query = "SELECT COUNT(1) FROM User WHERE Username = @Username";
+
+            using var connection = new MySqlConnection(_connectionString);
+            await connection.OpenAsync();
+
             return await ExecuteScalarAsync(query, new Dictionary<string, object>
             {
                 { "@Username", username }
-            }) > 0;
+            }, connection) > 0;
         }
 
         public async Task<bool> CreateUserAsync(string username, string password, string name)
@@ -143,15 +147,26 @@ namespace ArithmeticCalculatorUserApi.Infrastructure.Repositories
             return await cmd.ExecuteNonQueryAsync();
         }
 
-        private async Task<int> ExecuteScalarAsync(string query, Dictionary<string, object> parameters, MySqlConnection? connection = null)
+        private async Task<int> ExecuteScalarAsync(string query, Dictionary<string, object> parameters, MySqlConnection? connection)
         {
+            if (connection == null)
+            {
+                throw new ArgumentNullException(nameof(connection), "A valid MySQL connection must be provided.");
+            }
+
+            if (connection.State != ConnectionState.Open)
+            {
+                await connection.OpenAsync();
+            }
+
             using var cmd = new MySqlCommand(query, connection);
             foreach (var param in parameters)
             {
                 cmd.Parameters.AddWithValue(param.Key, param.Value);
             }
 
-            return Convert.ToInt32(await cmd.ExecuteScalarAsync());
+            var result = await cmd.ExecuteScalarAsync();
+            return Convert.ToInt32(result);
         }
     }
 }
