@@ -136,20 +136,13 @@ public class Function
         if (!RequestParserHelper.TryParseRequest<AddBalanceRequest>(request.Body, out var addBalanceRequest, out var errorMessage))
             return BuildResponse(HttpStatusCode.BadRequest, errorMessage!);
 
-        if (!await bankAccountService.AccountBelongsToUserAsync(addBalanceRequest.AccountId, userId))
+        if (!await bankAccountService.AccountBelongsToUserAsync(addBalanceRequest!.AccountId, userId))
             return BuildResponse(HttpStatusCode.Forbidden, new { error = ApiResponseMessages.AccountNotBelongToUser });
 
         if (!await bankAccountService.AddBalanceAsync(addBalanceRequest.AccountId, addBalanceRequest.Amount))
             return BuildResponse(HttpStatusCode.InternalServerError, new { error = ApiResponseMessages.AddBalanceFailed });
 
-        return BuildResponse(HttpStatusCode.OK, new ApiResponse 
-        { 
-            Data = new 
-            { 
-                message = ApiResponseMessages.AddBalanceSuccess 
-            },
-            StatusCode = (int)HttpStatusCode.OK
-        });
+        return BuildResponse(HttpStatusCode.OK, new { message = ApiResponseMessages.AddBalanceSuccess });
     }
 
     private async Task<APIGatewayProxyResponse> DebitBalance(APIGatewayProxyRequest request)
