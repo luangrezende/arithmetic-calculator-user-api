@@ -3,6 +3,7 @@ using ArithmeticCalculatorUserApi.Domain.Enums;
 using ArithmeticCalculatorUserApi.Domain.Models;
 using ArithmeticCalculatorUserApi.Domain.Repositories;
 using ArithmeticCalculatorUserApi.Infrastructure.Security;
+using ArithmeticCalculatorUserApi.Infrastructure.Extensions;
 using MySql.Data.MySqlClient;
 
 namespace ArithmeticCalculatorUserApi.Infrastructure.Repositories
@@ -119,7 +120,7 @@ namespace ArithmeticCalculatorUserApi.Infrastructure.Repositories
                         Username = reader.GetString("Username"),
                         Name = reader.GetString("Name"),
                         Status = reader.GetString("Status"),
-                        Password = reader["Password"] as string
+                        Password = reader.HasColumn("Password") ? reader["Password"] as string : null
                     };
                 }
             }
