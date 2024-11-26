@@ -65,7 +65,7 @@ public class Function
         if (!RequestParserHelper.TryParseRequest<TokenRequest>(request.Body, out var user, out var errorMessage))
             return BuildResponse(HttpStatusCode.BadRequest, errorMessage!);
 
-        if (string.IsNullOrWhiteSpace(user.Username) || string.IsNullOrWhiteSpace(user.Password))
+        if (string.IsNullOrWhiteSpace(user!.Username) || string.IsNullOrWhiteSpace(user.Password))
             return BuildResponse(HttpStatusCode.BadRequest, new { error = ApiResponseMessages.MissingUsernameOrPassword });
 
         var result = await userService.AuthenticateAsync(user.Username, user.Password);
@@ -91,7 +91,7 @@ public class Function
         if (!RequestParserHelper.TryParseRequest<UserCreationRequest>(request.Body, out var user, out var errorMessage))
             return BuildResponse(HttpStatusCode.BadRequest, errorMessage!);
 
-        if (string.IsNullOrWhiteSpace(user.Username) || string.IsNullOrWhiteSpace(user.Password) || string.IsNullOrWhiteSpace(user.Name))
+        if (string.IsNullOrWhiteSpace(user!.Username) || string.IsNullOrWhiteSpace(user.Password) || string.IsNullOrWhiteSpace(user.Name))
             return BuildResponse(HttpStatusCode.BadRequest, new { error = ApiResponseMessages.UsernamePasswordNameRequired });
 
         if (await userService.UserExistsAsync(user.Username))
@@ -192,7 +192,7 @@ public class Function
                 new ApiResponse
                 {
                     Data = body,
-                    StatusCode = (int)HttpStatusCode.OK,
+                    StatusCode = (int)statusCode,
                 }),
         };
 
