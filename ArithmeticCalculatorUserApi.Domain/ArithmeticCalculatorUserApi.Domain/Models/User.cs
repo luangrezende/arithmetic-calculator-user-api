@@ -2,7 +2,7 @@
 
 namespace ArithmeticCalculatorUserApi.Domain.Models
 {
-    public class AuthenticateUser
+    public class User
     {
         [JsonPropertyName("id")]
         public Guid Id { get; set; }
@@ -15,5 +15,8 @@ namespace ArithmeticCalculatorUserApi.Domain.Models
 
         [JsonPropertyName("status")]
         public string Status { get; set; }
+
+        [JsonPropertyName("accounts")]
+        public IEnumerable<BankAccount> Accounts { get; set; }
     }
 }

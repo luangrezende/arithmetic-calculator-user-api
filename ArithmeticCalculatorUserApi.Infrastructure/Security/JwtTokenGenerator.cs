@@ -16,7 +16,7 @@ namespace ArithmeticCalculatorUserApi.Infrastructure.Security
             _jwtSecret = jwtSecret;
         }
 
-        public string GenerateToken(AuthenticateUser user)
+        public string GenerateToken(User user)
         {
             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtSecret));
             var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
