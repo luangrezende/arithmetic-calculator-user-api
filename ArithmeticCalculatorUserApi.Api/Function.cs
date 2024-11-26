@@ -48,11 +48,11 @@ public class Function
 
         return request.HttpMethod switch
         {
-            "POST" when request.Path == "/user/login" => await Login(request),
-            "POST" when request.Path == "/user/register" => await Register(request),
-            "GET" when request.Path == "/user/profile" => await GetProfile(request),
-            "POST" when request.Path == "/account/add-balance" => await AddBalance(request),
-            "POST" when request.Path == "/account/debit-balance" => await DebitBalance(request),
+            "GET" when request.Path == "v1/user/profile" => await GetProfile(request),
+            "POST" when request.Path == "v1/user/login" => await Login(request),
+            "POST" when request.Path == "v1/user/register" => await Register(request),
+            "POST" when request.Path == "v1/user/account/add-balance" => await AddBalance(request),
+            "POST" when request.Path == "v1/user/account/debit-balance" => await DebitBalance(request),
             _ => BuildResponse(HttpStatusCode.NotFound, new { error = ApiResponseMessages.EndpointNotFound }),
         };
     }
