@@ -2,7 +2,7 @@
 using System.Security.Claims;
 using System.Text;
 using ArithmeticCalculatorUserApi.Domain.Enums;
-using ArithmeticCalculatorUserApi.Domain.Models;
+using ArithmeticCalculatorUserApi.Domain.Models.DTO;
 using Microsoft.IdentityModel.Tokens;
 
 namespace ArithmeticCalculatorUserApi.Infrastructure.Security
@@ -16,7 +16,7 @@ namespace ArithmeticCalculatorUserApi.Infrastructure.Security
             _jwtSecret = jwtSecret;
         }
 
-        public string GenerateToken(User user)
+        public string GenerateToken(UserAutheticateDTO user)
         {
             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtSecret));
             var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);

@@ -2,17 +2,26 @@
 {
     public static class ApiResponseMessages
     {
-        public const string MissingBody = "Request body cannot be null or empty.";
-        public const string InvalidCredentials = "Invalid username or password.";
-        public const string InternalServerError = "Internal server error.";
-        public const string EndpointNotFound = "Endpoint not found.";
-        public const string InvalidRequestBody = "Invalid request body.";
-        public const string InvalidJsonFormat = "Invalid JSON format.";
-        public const string MissingUsernameOrPassword = "Username and password are required.";
+        public const string MissingBody = "The request body cannot be null or empty.";
+        public const string InvalidCredentials = "The provided username or password is invalid.";
+        public const string InternalServerError = "An internal server error occurred.";
+        public const string EndpointNotFound = "The requested endpoint was not found.";
+        public const string AccountNotFound = "The specified account was not found.";
+        public const string InvalidRequestBody = "The request body is invalid.";
+        public const string InvalidJsonFormat = "The JSON format in the request body is invalid.";
+        public const string MissingUsernameOrPassword = "Both username and password are required.";
         public const string UsernamePasswordNameRequired = "Username, password, and name are required.";
-        public const string UsernameAlreadyExists = "This email is already registered. Please use another email.";
-        public const string ErrorCreatingUser = "Error creating the user.";
-        public const string UserCreatedSuccessfully = "User created successfully.";
+        public const string UsernameAlreadyExists = "This email is already registered.";
+        public const string ErrorCreatingUser = "An error occurred while creating the user.";
+        public const string UserCreatedSuccessfully = "The user was created successfully.";
         public const string UserInactive = "The user account is inactive.";
+        public const string AccountIdAmountRequired = "Account ID and a valid amount are required.";
+        public const string AddBalanceFailed = "An error occurred while adding balance to the account.";
+        public const string AddBalanceSuccess = "The balance was added successfully.";
+        public const string InvalidToken = "Invalid token.";
+        public const string UserNotFound = "User not found.";
+        public const string InsufficientBalance = "Insufficient balance to complete the transaction.";
+        public const string DebitBalanceSuccess = "Balance debited successfully.";
+        public const string AccountNotBelongToUser = "The specified account does not belong to the authenticated user.";
     }
 }

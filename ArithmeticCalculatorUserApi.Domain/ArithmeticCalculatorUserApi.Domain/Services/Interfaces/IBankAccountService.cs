@@ -1,8 +1,8 @@
 ﻿using ArithmeticCalculatorUserApi.Domain.Models;
 
-namespace ArithmeticCalculatorUserApi.Domain.Repositories
+namespace ArithmeticCalculatorUserApi.Domain.Services.Interfaces
 {
-    public interface IBankAccountRepository
+    public interface IBankAccountService
     {
         Task<IEnumerable<BankAccount>> GetBankAccountsByUserIdAsync(Guid userId);
 
