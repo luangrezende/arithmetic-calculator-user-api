@@ -1,4 +1,5 @@
 ﻿using System.Data;
+using ArithmeticCalculatorUserApi.Domain.Enums;
 using ArithmeticCalculatorUserApi.Domain.Models;
 using ArithmeticCalculatorUserApi.Domain.Repositories;
 using MySql.Data.MySqlClient;
@@ -14,7 +15,7 @@ namespace ArithmeticCalculatorUserApi.Infrastructure.Repositories
             _connectionString = connectionString;
         }
 
-        public AuthenticateUser? Authenticate(string username, string password)
+        public User? Authenticate(string username, string password)
         {
             try
             {
@@ -29,7 +30,7 @@ namespace ArithmeticCalculatorUserApi.Infrastructure.Repositories
                 using var reader = cmd.ExecuteReader();
                 if (reader.Read())
                 {
-                    return new AuthenticateUser
+                    return new User
                     {
                         Id = reader.GetGuid("Id"),
                         Username = reader.GetString("Username"),
@@ -72,15 +73,50 @@ namespace ArithmeticCalculatorUserApi.Infrastructure.Repositories
                 using var connection = new MySqlConnection(_connectionString);
                 connection.Open();
 
-                const string query = "INSERT INTO User (Id, Username, Password, Name) VALUES (@Id, @Username, @Password, @Name)";
-                using var cmd = new MySqlCommand(query, connection);
+                using var transaction = connection.BeginTransaction();
 
-                cmd.Parameters.AddWithValue("@Id", Guid.NewGuid());
-                cmd.Parameters.AddWithValue("@Username", username);
-                cmd.Parameters.AddWithValue("@Password", password); // Substituir por hash em produção.
-                cmd.Parameters.AddWithValue("@Name", name);
+                const string userQuery = "INSERT INTO User (Id, Username, Password, Name) VALUES (@Id, @Username, @Password, @Name)";
+                using var userCmd = new MySqlCommand(userQuery, connection, transaction);
 
-                return cmd.ExecuteNonQuery() > 0;
+                var userId = Guid.NewGuid();
+                userCmd.Parameters.AddWithValue("@Id", userId);
+                userCmd.Parameters.AddWithValue("@Username", username);
+                userCmd.Parameters.AddWithValue("@Password", password); // Substituir por hash em produção.
+                userCmd.Parameters.AddWithValue("@Name", name);
+
+                if (userCmd.ExecuteNonQuery() <= 0)
+                {
+                    transaction.Rollback();
+                    return false;
+                }
+
+                const string accountQuery = "INSERT INTO BankAccount (Id, User_Id, Account_Type, Balance) VALUES (@Id, @UserId, @AccountType, @Balance)";
+                using var accountCmd = new MySqlCommand(accountQuery, connection, transaction);
+
+                decimal promotionalAmount = decimal.Parse(Environment.GetEnvironmentVariable("promotionalAmount")!);
+
+                accountCmd.Parameters.AddWithValue("@Id", Guid.NewGuid());
+                accountCmd.Parameters.AddWithValue("@UserId", userId);
+                accountCmd.Parameters.AddWithValue("@AccountType", string.Empty);
+                accountCmd.Parameters.AddWithValue("@Balance", promotionalAmount);
+
+                accountCmd.Parameters["@AccountType"].Value = AccountType.Personal.ToString().ToLower();
+                if (accountCmd.ExecuteNonQuery() <= 0)
+                {
+                    transaction.Rollback();
+                    return false;
+                }
+
+                accountCmd.Parameters["@Id"].Value = Guid.NewGuid();
+                accountCmd.Parameters["@AccountType"].Value = AccountType.Business.ToString().ToLower();
+                if (accountCmd.ExecuteNonQuery() <= 0)
+                {
+                    transaction.Rollback();
+                    return false;
+                }
+
+                transaction.Commit();
+                return true;
             }
             catch (Exception ex)
             {
@@ -88,26 +124,26 @@ namespace ArithmeticCalculatorUserApi.Infrastructure.Repositories
             }
         }
 
-        public AuthenticateUser? GetUserById(Guid userId)
+        public User? GetUserById(Guid userId)
         {
             try
             {
                 using var connection = new MySqlConnection(_connectionString);
                 connection.Open();
 
-                const string query = "SELECT Id, Username, Status, Name, Username FROM User WHERE Id = @UserId";
+                const string query = "SELECT id, username, status, name FROM User WHERE id = @UserId";
                 using var cmd = new MySqlCommand(query, connection);
                 cmd.Parameters.AddWithValue("@UserId", userId);
 
                 using var reader = cmd.ExecuteReader();
                 if (reader.Read())
                 {
-                    return new AuthenticateUser
+                    return new User
                     {
-                        Id = reader.GetGuid("Id"),
-                        Username = reader.GetString("Username"),
-                        Status = reader.GetString("Status"),
-                        Name = reader.GetString("Name"),
+                        Id = reader.GetGuid("id"),
+                        Username = reader.GetString("username"),
+                        Status = reader.GetString("status"),
+                        Name = reader.GetString("name"),
                     };
                 }
             }

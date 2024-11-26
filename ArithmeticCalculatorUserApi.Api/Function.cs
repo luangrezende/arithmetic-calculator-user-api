@@ -1,7 +1,5 @@
 using System.Net;
 using System.Text.Json;
-using System.Text.Json.Nodes;
-using System.Text.Json.Serialization;
 using Amazon.Lambda.APIGatewayEvents;
 using Amazon.Lambda.Core;
 using ArithmeticCalculatorUserApi.Domain.Constants;
@@ -21,6 +19,7 @@ namespace ArithmeticCalculatorUserApi
     public class Function
     {
         private readonly IUserRepository _userRepository;
+        private readonly IBankAccountRepository _bankAccountRepository;
         private readonly JwtTokenGenerator _jwtTokenGenerator;
         private readonly JwtTokenValidator _jwtTokenValidator;
 
@@ -30,6 +29,7 @@ namespace ArithmeticCalculatorUserApi
             var jwtSecret = Environment.GetEnvironmentVariable("jwtSecretKey");
 
             _userRepository = new UserRepository(connectionString!);
+            _bankAccountRepository = new BankAccountRepository(connectionString!);
             _jwtTokenGenerator = new JwtTokenGenerator(jwtSecret!);
             _jwtTokenValidator = new JwtTokenValidator(jwtSecret!);
         }
@@ -42,33 +42,49 @@ namespace ArithmeticCalculatorUserApi
 
                 if (!request.Headers.TryGetValue("Authorization", out var authorization) || string.IsNullOrWhiteSpace(authorization))
                 {
-                    context.Logger.LogLine($"Request header: {authorization}");
+                    context.Logger.LogLine("Authorization header is missing or empty.");
                     return BuildResponse(HttpStatusCode.Unauthorized, new { error = "Missing or invalid token" });
                 }
 
                 var token = authorization.Replace("Bearer ", "", StringComparison.OrdinalIgnoreCase);
+
                 if (!_jwtTokenValidator.ValidateToken(token, out var userId))
                 {
+                    context.Logger.LogLine("Token validation failed.");
                     return BuildResponse(HttpStatusCode.Unauthorized, new { error = "Invalid token" });
                 }
 
                 var user = _userRepository.GetUserById(userId);
                 if (user == null)
                 {
+                    context.Logger.LogLine($"User with ID {userId} not found.");
                     return BuildResponse(HttpStatusCode.NotFound, new { error = "User not found" });
                 }
 
-                return BuildResponse(HttpStatusCode.OK, new AuthenticateUser
+                var accounts = _bankAccountRepository.GetBankAccountsByUserId(userId);
+
+                var response = new User
                 {
                     Id = user.Id,
                     Username = user.Username,
                     Name = user.Name,
-                    Status = user.Status
-                });
+                    Status = user.Status,
+                    Accounts = accounts.Select(account => new BankAccount
+                    {
+                        Id = account.Id,
+                        AccountType = account.AccountType,
+                        Balance = account.Balance,
+                        Currency = account.Currency
+                    })
+                };
+
+                return BuildResponse(HttpStatusCode.OK, response);
             }
             catch (Exception ex)
             {
-                context.Logger.LogLine($"Error: {ex.Message}");
+                context.Logger.LogLine($"Error in GetProfile: {ex.Message}");
+                context.Logger.LogLine($"StackTrace: {ex.StackTrace}");
+
                 return BuildResponse(HttpStatusCode.InternalServerError, new { error = "An unexpected error occurred" });
             }
         }
