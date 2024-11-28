@@ -19,6 +19,7 @@
         public const string AddBalanceFailed = "An error occurred while adding balance to the account.";
         public const string AddBalanceSuccess = "The balance was added successfully.";
         public const string InvalidToken = "Invalid token.";
+        public const string TokenExpired = "Token expired.";
         public const string UserNotFound = "User not found.";
         public const string InsufficientBalance = "Insufficient balance to complete the transaction.";
         public const string DebitBalanceSuccess = "Balance debited successfully.";
