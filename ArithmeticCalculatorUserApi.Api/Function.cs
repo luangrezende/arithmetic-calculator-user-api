@@ -156,10 +156,8 @@ public class Function
 
         await refreshTokenService.InvalidateTokenAsync(refreshTokenRequest.RefreshToken);
 
-        var user = await userService.GetUserByIdAsync(storedRefreshToken.UserId);
-        if (user == null)
-            throw new HttpResponseException(HttpStatusCode.NotFound, ApiResponseMessages.UserNotFound);
-
+        var user = await userService.GetUserByIdAsync(storedRefreshToken.UserId) 
+            ?? throw new HttpResponseException(HttpStatusCode.NotFound, ApiResponseMessages.UserNotFound);
         var newAccessToken = jwtTokenGenerator.GenerateToken(user);
         var token = await refreshTokenService.AddAsync(user.Id);
 
@@ -167,7 +165,7 @@ public class Function
         {
             Token = newAccessToken,
             RefreshToken = token,
-            Expiration = (int)TokenConfiguration.RefreshTokenExpirationTimeInSeconds
+            Expiration = (int)TokenConfiguration.AccessTokenExpirationTimeInSeconds
         });
     }
 
@@ -190,7 +188,7 @@ public class Function
         {
             Token = accessToken,
             RefreshToken = token,
-            Expiration = (int)TokenConfiguration.RefreshTokenExpirationTimeInSeconds
+            Expiration = (int)TokenConfiguration.AccessTokenExpirationTimeInSeconds
         });
     }
 

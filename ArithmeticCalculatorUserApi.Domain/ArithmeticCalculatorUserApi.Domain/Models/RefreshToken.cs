@@ -10,7 +10,7 @@ namespace ArithmeticCalculatorUserApi.Domain.Models
 
         public string Token { get; set; } = Guid.NewGuid().ToString();
 
-        public DateTime ExpiresAt { get; set; } = DateTime.UtcNow.AddMinutes((int)TokenConfiguration.ExpiryDateInDays);
+        public DateTime ExpiresAt { get; set; } = DateTime.UtcNow.AddMinutes((int)TokenConfiguration.RefreshTokenExpirationTimeInHours);
 
         public bool IsRevoked { get; set; } = false;
 
