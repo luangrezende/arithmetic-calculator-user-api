@@ -13,6 +13,7 @@ using ArithmeticCalculatorUserApi.Helpers;
 using ArithmeticCalculatorUserApi.Infrastructure.Repositories;
 using ArithmeticCalculatorUserApi.Infrastructure.Security;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.IdentityModel.Tokens;
 
 [assembly: LambdaSerializer(typeof(Amazon.Lambda.Serialization.SystemTextJson.DefaultLambdaJsonSerializer))]
 
@@ -64,6 +65,11 @@ public class Function
         catch (HttpResponseException ex)
         {
             return BuildResponse(ex.StatusCode, ex.ResponseBody ?? new { error = "An error occurred." });
+        }
+        catch (SecurityTokenExpiredException ex)
+        {
+            context.Logger.LogError($"SecurityTokenExpiredException: {ex}");
+            return BuildResponse(HttpStatusCode.Unauthorized, new { error = ApiResponseMessages.TokenExpired });
         }
         catch (Exception ex)
         {
