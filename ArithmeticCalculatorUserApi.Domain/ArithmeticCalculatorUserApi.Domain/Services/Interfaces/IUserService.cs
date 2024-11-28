@@ -1,5 +1,4 @@
-﻿using ArithmeticCalculatorUserApi.Domain.Models;
-using ArithmeticCalculatorUserApi.Domain.Models.DTO;
+﻿using ArithmeticCalculatorUserApi.Domain.Models.DTO;
 
 namespace ArithmeticCalculatorUserApi.Domain.Services.Interfaces
 {
@@ -11,6 +10,6 @@ namespace ArithmeticCalculatorUserApi.Domain.Services.Interfaces
 
         Task<bool> CreateUserAsync(string username, string password, string name);
 
-        Task<User?> GetUserByIdAsync(Guid userId);
+        Task<UserAutheticateDTO?> GetUserByIdAsync(Guid userId);
     }
 }

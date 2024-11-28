@@ -1,5 +1,4 @@
-﻿using ArithmeticCalculatorUserApi.Domain.Models;
-using ArithmeticCalculatorUserApi.Domain.Models.DTO;
+﻿using ArithmeticCalculatorUserApi.Domain.Models.DTO;
 using ArithmeticCalculatorUserApi.Domain.Repositories;
 using ArithmeticCalculatorUserApi.Domain.Services.Interfaces;
 
@@ -33,9 +32,18 @@ namespace ArithmeticCalculatorUserApi.Domain.Services
             return await _userRepository.CreateUserAsync(username, password, name);
         }
 
-        public async Task<User?> GetUserByIdAsync(Guid userId)
+        public async Task<UserAutheticateDTO?> GetUserByIdAsync(Guid userId)
         {
-            return await _userRepository.GetUserByIdAsync(userId);
+            var result = await _userRepository.GetUserByIdAsync(userId);
+
+            return new UserAutheticateDTO
+            {
+                Id = result!.Id,
+                Username = result.Username,
+                Status = result.Status,
+                Name = result.Name,
+                Accounts = result.Accounts
+            };
         }
 
         public async Task<bool> UserExistsAsync(string username)

@@ -2,10 +2,10 @@
 
 namespace ArithmeticCalculatorUserApi.Domain.Models.Request
 {
-    public class AddBalanceRequest
+    public class UpdateBalanceRequest
     {
         [JsonPropertyName("accountId")]
-        public string AccountId { get; set; }
+        public Guid AccountId { get; set; }
 
         [JsonPropertyName("amount")]
         public decimal Amount { get; set; }

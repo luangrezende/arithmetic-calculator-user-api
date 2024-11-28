@@ -4,9 +4,6 @@ namespace ArithmeticCalculatorUserApi.Domain.Models.Response
 {
     public class UserProfileResponse
     {
-        [JsonPropertyName("id")]
-        public Guid Id { get; set; }
-
         [JsonPropertyName("username")]
         public string Username { get; set; }
 
@@ -17,6 +14,6 @@ namespace ArithmeticCalculatorUserApi.Domain.Models.Response
         public string Status { get; set; }
 
         [JsonPropertyName("accounts")]
-        public IEnumerable<BankAccount> Accounts { get; set; }
+        public List<BankAccountResponse> Accounts { get; set; }
     }
 }

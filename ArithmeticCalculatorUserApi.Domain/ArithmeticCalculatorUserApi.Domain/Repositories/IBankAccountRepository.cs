@@ -6,12 +6,12 @@ namespace ArithmeticCalculatorUserApi.Domain.Repositories
     {
         Task<IEnumerable<BankAccount>> GetBankAccountsByUserIdAsync(Guid userId);
 
-        Task<bool> AccountExistsAsync(string accountId);
+        Task<bool> AccountExistsAsync(Guid accountId);
 
-        Task<bool> AddBalanceAsync(string accountId, decimal amount);
+        Task<bool> AddBalanceAsync(Guid accountId, decimal amount);
 
-        Task<bool> DebitBalanceAsync(string accountId, decimal amount);
+        Task<bool> DebitBalanceAsync(Guid accountId, decimal amount);
 
-        Task<bool> AccountBelongsToUserAsync(string accountId, Guid userId);
+        Task<bool> AccountBelongsToUserAsync(Guid accountId, Guid userId);
     }
 }

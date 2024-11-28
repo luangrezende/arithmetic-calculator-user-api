@@ -13,7 +13,7 @@ namespace ArithmeticCalculatorUserApi.Infrastructure.Security
             _secretKey = secretKey;
         }
 
-        public bool ValidateToken(string token, out Guid userId)
+        public bool ValidateToken(string token, out Guid userId, bool allowExpired = false)
         {
             userId = Guid.Empty;
             var tokenHandler = new JwtSecurityTokenHandler();
@@ -25,7 +25,8 @@ namespace ArithmeticCalculatorUserApi.Infrastructure.Security
                 IssuerSigningKey = key,
                 ValidateIssuer = false,
                 ValidateAudience = false,
-                ClockSkew = TimeSpan.Zero
+                ClockSkew = TimeSpan.Zero,
+                ValidateLifetime = !allowExpired
             };
 
             var claimsPrincipal = tokenHandler.ValidateToken(token, validationParameters, out var validatedToken);
@@ -33,7 +34,6 @@ namespace ArithmeticCalculatorUserApi.Infrastructure.Security
             if (validatedToken is JwtSecurityToken jwtToken)
             {
                 var userIdClaim = jwtToken.Claims.FirstOrDefault(c => c.Type == "id");
-
                 if (userIdClaim != null && Guid.TryParse(userIdClaim.Value, out var parsedUserId))
                 {
                     userId = parsedUserId;
@@ -43,5 +43,6 @@ namespace ArithmeticCalculatorUserApi.Infrastructure.Security
 
             return false;
         }
+
     }
 }

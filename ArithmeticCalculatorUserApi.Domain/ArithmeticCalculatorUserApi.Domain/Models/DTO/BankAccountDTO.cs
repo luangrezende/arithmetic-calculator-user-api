@@ -1,6 +1,6 @@
-﻿namespace ArithmeticCalculatorUserApi.Domain.Models
+﻿namespace ArithmeticCalculatorUserApi.Domain.Models.DTO
 {
-    public class BankAccount
+    public class BankAccountDTO
     {
         public Guid Id { get; set; }
 
