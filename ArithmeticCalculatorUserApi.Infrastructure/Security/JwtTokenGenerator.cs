@@ -33,7 +33,7 @@ namespace ArithmeticCalculatorUserApi.Infrastructure.Security
                 issuer: "arithmetic-calculator",
                 audience: "arithmetic-calculator",
                 claims: claims,
-                expires: DateTime.UtcNow.AddSeconds((int)TokenConfiguration.ExpirationTimeInSeconds),
+                expires: DateTime.UtcNow.AddSeconds((int)TokenConfiguration.RefreshTokenExpirationTimeInSeconds),
                 signingCredentials: credentials);
 
             return new JwtSecurityTokenHandler().WriteToken(token);

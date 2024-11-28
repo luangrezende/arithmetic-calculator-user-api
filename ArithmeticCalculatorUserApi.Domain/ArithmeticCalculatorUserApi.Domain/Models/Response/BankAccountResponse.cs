@@ -1,0 +1,19 @@
+﻿using System.Text.Json.Serialization;
+
+namespace ArithmeticCalculatorUserApi.Domain.Models.Response
+{
+    public class BankAccountResponse
+    {
+        [JsonPropertyName("id")]
+        public Guid Id { get; set; }
+
+        [JsonPropertyName("accountType")]
+        public string AccountType { get; set; }
+
+        [JsonPropertyName("balance")]
+        public decimal Balance { get; set; }
+
+        [JsonPropertyName("currency")]
+        public string Currency { get; set; }
+    }
+}

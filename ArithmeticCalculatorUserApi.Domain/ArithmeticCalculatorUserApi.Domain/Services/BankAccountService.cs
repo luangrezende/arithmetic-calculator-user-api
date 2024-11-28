@@ -1,4 +1,4 @@
-﻿using ArithmeticCalculatorUserApi.Domain.Models;
+﻿using ArithmeticCalculatorUserApi.Domain.Models.DTO;
 using ArithmeticCalculatorUserApi.Domain.Repositories;
 using ArithmeticCalculatorUserApi.Domain.Services.Interfaces;
 
@@ -13,29 +13,40 @@ namespace ArithmeticCalculatorUserApi.Domain.Services
             _bankAccountRepository = bankAccountRepository;
         }
 
-        public async Task<bool> AccountBelongsToUserAsync(string accountId, Guid userId)
+        public async Task<bool> AccountBelongsToUserAsync(Guid accountId, Guid userId)
         {
             return await _bankAccountRepository.AccountBelongsToUserAsync(accountId, userId);
         }
 
-        public async Task<bool> AccountExistsAsync(string accountId)
+        public async Task<bool> AccountExistsAsync(Guid accountId)
         {
             return await _bankAccountRepository.AccountExistsAsync(accountId);
         }
 
-        public async Task<bool> AddBalanceAsync(string accountId, decimal amount)
+        public async Task<bool> AddBalanceAsync(Guid accountId, decimal amount)
         {
             return await _bankAccountRepository.AddBalanceAsync(accountId, amount);
         }
 
-        public async Task<bool> DebitBalanceAsync(string accountId, decimal amount)
+        public async Task<bool> DebitBalanceAsync(Guid accountId, decimal amount)
         {
             return await _bankAccountRepository.DebitBalanceAsync(accountId, amount);
         }
 
-        public async Task<IEnumerable<BankAccount>> GetBankAccountsByUserIdAsync(Guid userId)
+        public async Task<List<BankAccountDTO>?> GetBankAccountsByUserIdAsync(Guid userId)
         {
-            return await _bankAccountRepository.GetBankAccountsByUserIdAsync(userId);
+            var bankAccounts = await _bankAccountRepository.GetBankAccountsByUserIdAsync(userId);
+
+            return bankAccounts?.Select(account => new BankAccountDTO
+            {
+                Id = account.Id,
+                UserId = account.UserId,
+                AccountType = account.AccountType,
+                Balance = account.Balance,
+                CreatedAt = account.CreatedAt,
+                Currency = account.Currency,
+                UpdatedAt = account.UpdatedAt
+            }).ToList();
         }
     }
 }

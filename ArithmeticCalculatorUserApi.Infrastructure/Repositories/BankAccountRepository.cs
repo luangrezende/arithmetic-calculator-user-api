@@ -15,7 +15,7 @@ namespace ArithmeticCalculatorUserApi.Infrastructure.Repositories
             _connectionString = connectionString!;
         }
 
-        public async Task<bool> AccountBelongsToUserAsync(string accountId, Guid userId)
+        public async Task<bool> AccountBelongsToUserAsync(Guid accountId, Guid userId)
         {
             try
             {
@@ -40,7 +40,7 @@ namespace ArithmeticCalculatorUserApi.Infrastructure.Repositories
             }
         }
 
-        public async Task<bool> AccountExistsAsync(string accountId)
+        public async Task<bool> AccountExistsAsync(Guid accountId)
         {
             try
             {
@@ -65,7 +65,7 @@ namespace ArithmeticCalculatorUserApi.Infrastructure.Repositories
             }
         }
 
-        public async Task<bool> AddBalanceAsync(string accountId, decimal amount)
+        public async Task<bool> AddBalanceAsync(Guid accountId, decimal amount)
         {
             try
             {
@@ -92,7 +92,7 @@ namespace ArithmeticCalculatorUserApi.Infrastructure.Repositories
             }
         }
 
-        public async Task<bool> DebitBalanceAsync(string accountId, decimal amount)
+        public async Task<bool> DebitBalanceAsync(Guid accountId, decimal amount)
         {
             try
             {

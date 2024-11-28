@@ -6,5 +6,4 @@
         Inactive,
         Suspended
     }
-
 }

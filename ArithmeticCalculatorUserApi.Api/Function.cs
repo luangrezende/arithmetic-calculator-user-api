@@ -21,66 +21,170 @@ namespace ArithmeticCalculatorUserApi;
 public class Function
 {
     private readonly IServiceProvider _serviceProvider;
-    private readonly JwtTokenValidator _jwtTokenValidator;
 
     public Function()
     {
-        var jwtSecret = Environment.GetEnvironmentVariable("jwtSecretKey");
         var serviceCollection = new ServiceCollection();
         ConfigureServices(serviceCollection);
         _serviceProvider = serviceCollection.BuildServiceProvider();
-        _jwtTokenValidator = new JwtTokenValidator(jwtSecret!);
     }
 
     private void ConfigureServices(IServiceCollection services)
     {
         services.AddScoped<IUserService, UserService>();
+        services.AddScoped<IRefreshTokenService, RefreshTokenService>();
         services.AddScoped<IBankAccountService, BankAccountService>();
+
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IBankAccountRepository, BankAccountRepository>();
+        services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
+
         services.AddScoped(sp => new JwtTokenGenerator(Environment.GetEnvironmentVariable("jwtSecretKey")!));
+        services.AddScoped(sp => new JwtTokenValidator(Environment.GetEnvironmentVariable("jwtSecretKey")!));
     }
 
     public async Task<APIGatewayProxyResponse> FunctionHandler(APIGatewayProxyRequest request, ILambdaContext context)
     {
-        if (request.HttpMethod == "OPTIONS")
-            return BuildPreflightResponse();
-
-        return request.HttpMethod switch
+        try
         {
-            "GET" when request.Path == "/v1/user/profile" => await GetProfile(request),
-            "POST" when request.Path == "/v1/user/login" => await Login(request),
-            "POST" when request.Path == "/v1/user/register" => await Register(request),
-            "POST" when request.Path == "/v1/user/account/add-balance" => await AddBalance(request),
-            "POST" when request.Path == "/v1/user/account/debit-balance" => await DebitBalance(request),
-            _ => BuildResponse(HttpStatusCode.NotFound, new { error = ApiResponseMessages.EndpointNotFound }),
+            if (request.HttpMethod == "OPTIONS")
+                return BuildPreflightResponse();
+
+            return request.HttpMethod switch
+            {
+                "GET" when request.Path == "/v1/user/auth/profile" => await GetProfile(request),
+                "POST" when request.Path == "/v1/user/auth/login" => await Login(request),
+                "POST" when request.Path == "/v1/user/auth/refresh" => await RefreshToken(request),
+                "POST" when request.Path == "/v1/user/auth/register" => await Register(request),
+                "POST" when request.Path == "/v1/user/account/balance" => await AddBalance(request),
+                "DELETE" when request.Path == "/v1/user/account/balance" => await DebitBalance(request),
+                _ => BuildResponse(HttpStatusCode.NotFound, new { error = "Endpoint not found." }),
+            };
+        }
+        catch (HttpResponseException ex)
+        {
+            return BuildResponse(ex.StatusCode, ex.ResponseBody ?? new { error = "An error occurred." });
+        }
+        catch (Exception ex)
+        {
+            context.Logger.LogError($"Unhandled exception: {ex}");
+            return BuildResponse(HttpStatusCode.InternalServerError, new { error = "Internal server error." });
+        }
+    }
+
+    private T ParseRequestOrThrow<T>(string requestBody)
+    {
+        if (!RequestParserHelper.TryParseRequest<T>(requestBody, out var parsedRequest, out var errorMessage))
+            throw new HttpResponseException(HttpStatusCode.BadRequest, errorMessage!);
+        return parsedRequest!;
+    }
+
+    private Guid ValidateTokenOrThrow(APIGatewayProxyRequest request)
+    {
+        var jwtTokenValidator = _serviceProvider.GetRequiredService<JwtTokenValidator>();
+        if (!request.Headers.TryGetValue("Authorization", out var authorization) || string.IsNullOrWhiteSpace(authorization))
+            throw new HttpResponseException(HttpStatusCode.Unauthorized, ApiResponseMessages.InvalidToken);
+
+        var token = authorization.Replace("Bearer ", "", StringComparison.OrdinalIgnoreCase);
+        if (!jwtTokenValidator.ValidateToken(token, out var userId))
+            throw new HttpResponseException(HttpStatusCode.Unauthorized, ApiResponseMessages.InvalidToken);
+
+        return userId;
+    }
+
+    private async Task UpdateBalanceAsync(Guid userId, Guid accountId, decimal amount, BalanceOperation operation)
+    {
+        var bankAccountService = _serviceProvider.GetRequiredService<IBankAccountService>();
+
+        if (!await bankAccountService.AccountBelongsToUserAsync(accountId, userId))
+            throw new HttpResponseException(HttpStatusCode.Forbidden, ApiResponseMessages.AccountNotBelongToUser);
+
+        bool success = operation switch
+        {
+            BalanceOperation.Add => await bankAccountService.AddBalanceAsync(accountId, amount),
+            BalanceOperation.Debit => await bankAccountService.DebitBalanceAsync(accountId, amount),
+            _ => throw new HttpResponseException(HttpStatusCode.BadRequest, "Invalid operation")
         };
+
+        if (!success)
+            throw new HttpResponseException(HttpStatusCode.BadRequest, operation == BalanceOperation.Add
+                ? ApiResponseMessages.AddBalanceFailed
+                : ApiResponseMessages.InsufficientBalance);
+    }
+
+
+    private async Task<APIGatewayProxyResponse> AddBalance(APIGatewayProxyRequest request)
+    {
+        var userId = ValidateTokenOrThrow(request);
+        var addBalanceRequest = ParseRequestOrThrow<UpdateBalanceRequest>(request.Body);
+
+        if (addBalanceRequest.Amount <= 0)
+            return BuildResponse(HttpStatusCode.BadRequest, new { error = ApiResponseMessages.InvalidAmount });
+
+        await UpdateBalanceAsync(userId, addBalanceRequest.AccountId, addBalanceRequest.Amount, BalanceOperation.Add);
+
+        return BuildResponse(HttpStatusCode.OK, new { message = ApiResponseMessages.AddBalanceSuccess });
+    }
+
+    private async Task<APIGatewayProxyResponse> DebitBalance(APIGatewayProxyRequest request)
+    {
+        var userId = ValidateTokenOrThrow(request);
+        var debitBalanceRequest = ParseRequestOrThrow<UpdateBalanceRequest>(request.Body);
+
+        await UpdateBalanceAsync(userId, debitBalanceRequest.AccountId, debitBalanceRequest.Amount, BalanceOperation.Debit);
+
+        return BuildResponse(HttpStatusCode.OK, new { message = ApiResponseMessages.DebitBalanceSuccess });
+    }
+
+    private async Task<APIGatewayProxyResponse> RefreshToken(APIGatewayProxyRequest request)
+    {
+        var userService = _serviceProvider.GetRequiredService<IUserService>();
+        var refreshTokenService = _serviceProvider.GetRequiredService<IRefreshTokenService>();
+        var jwtTokenGenerator = _serviceProvider.GetRequiredService<JwtTokenGenerator>();
+
+        var refreshTokenRequest = ParseRequestOrThrow<RefreshTokenRequest>(request.Body);
+
+        var storedRefreshToken = await refreshTokenService.GetByTokenAsync(refreshTokenRequest.RefreshToken);
+        if (storedRefreshToken == null || storedRefreshToken.ExpiresAt <= DateTime.UtcNow)
+            throw new HttpResponseException(HttpStatusCode.Unauthorized, ApiResponseMessages.InvalidRefreshToken);
+
+        await refreshTokenService.InvalidateTokenAsync(refreshTokenRequest.RefreshToken);
+
+        var user = await userService.GetUserByIdAsync(storedRefreshToken.UserId);
+        if (user == null)
+            throw new HttpResponseException(HttpStatusCode.NotFound, ApiResponseMessages.UserNotFound);
+
+        var newAccessToken = jwtTokenGenerator.GenerateToken(user);
+        var token = await refreshTokenService.AddAsync(user.Id);
+
+        return BuildResponse(HttpStatusCode.OK, new TokenResponse
+        {
+            Token = newAccessToken,
+            RefreshToken = token,
+            Expiration = (int)TokenConfiguration.RefreshTokenExpirationTimeInSeconds
+        });
     }
 
     private async Task<APIGatewayProxyResponse> Login(APIGatewayProxyRequest request)
     {
         var userService = _serviceProvider.GetRequiredService<IUserService>();
+        var refreshTokenService = _serviceProvider.GetRequiredService<IRefreshTokenService>();
         var jwtTokenGenerator = _serviceProvider.GetRequiredService<JwtTokenGenerator>();
 
-        if (!RequestParserHelper.TryParseRequest<TokenRequest>(request.Body, out var user, out var errorMessage))
-            return BuildResponse(HttpStatusCode.BadRequest, errorMessage!);
-
-        if (string.IsNullOrWhiteSpace(user!.Username) || string.IsNullOrWhiteSpace(user.Password))
-            return BuildResponse(HttpStatusCode.BadRequest, new { error = ApiResponseMessages.MissingUsernameOrPassword });
+        var user = ParseRequestOrThrow<TokenRequest>(request.Body);
 
         var result = await userService.AuthenticateAsync(user.Username, user.Password);
         if (result == null)
-            return BuildResponse(HttpStatusCode.Unauthorized, new { error = ApiResponseMessages.InvalidCredentials });
+            throw new HttpResponseException(HttpStatusCode.Unauthorized, ApiResponseMessages.InvalidCredentials);
 
-        if (!result.Status.Equals(UserStatus.Active.ToString(), StringComparison.CurrentCultureIgnoreCase))
-            return BuildResponse(HttpStatusCode.Forbidden, new { error = ApiResponseMessages.UserInactive });
-
-        var token = jwtTokenGenerator.GenerateToken(result);
+        var accessToken = jwtTokenGenerator.GenerateToken(result);
+        var token = await refreshTokenService.AddAsync(result.Id);
 
         return BuildResponse(HttpStatusCode.OK, new TokenResponse
         {
-            Token = token,
-            Expiration = (int)TokenConfiguration.ExpirationTimeInSeconds,
+            Token = accessToken,
+            RefreshToken = token,
+            Expiration = (int)TokenConfiguration.RefreshTokenExpirationTimeInSeconds
         });
     }
 
@@ -88,92 +192,42 @@ public class Function
     {
         var userService = _serviceProvider.GetRequiredService<IUserService>();
 
-        if (!RequestParserHelper.TryParseRequest<UserCreationRequest>(request.Body, out var user, out var errorMessage))
-            return BuildResponse(HttpStatusCode.BadRequest, errorMessage!);
-
-        if (string.IsNullOrWhiteSpace(user!.Username) || string.IsNullOrWhiteSpace(user.Password) || string.IsNullOrWhiteSpace(user.Name))
-            return BuildResponse(HttpStatusCode.BadRequest, new { error = ApiResponseMessages.UsernamePasswordNameRequired });
+        var user = ParseRequestOrThrow<UserCreationRequest>(request.Body);
 
         if (await userService.UserExistsAsync(user.Username))
-            return BuildResponse(HttpStatusCode.Conflict, new { error = ApiResponseMessages.UsernameAlreadyExists });
+            throw new HttpResponseException(HttpStatusCode.Conflict, ApiResponseMessages.UsernameAlreadyExists);
 
         if (!await userService.CreateUserAsync(user.Username, user.Password, user.Name))
-            return BuildResponse(HttpStatusCode.InternalServerError, new { error = ApiResponseMessages.ErrorCreatingUser });
+            throw new HttpResponseException(HttpStatusCode.InternalServerError, ApiResponseMessages.ErrorCreatingUser);
 
         return BuildResponse(HttpStatusCode.Created, new { message = ApiResponseMessages.UserCreatedSuccessfully });
     }
 
     private async Task<APIGatewayProxyResponse> GetProfile(APIGatewayProxyRequest request)
     {
+        var userId = ValidateTokenOrThrow(request);
         var userService = _serviceProvider.GetRequiredService<IUserService>();
         var bankAccountService = _serviceProvider.GetRequiredService<IBankAccountService>();
 
-        if (!TryValidateToken(request, out var userId))
-            return BuildResponse(HttpStatusCode.Unauthorized, new { error = ApiResponseMessages.InvalidToken });
-
         var user = await userService.GetUserByIdAsync(userId);
         if (user == null)
-            return BuildResponse(HttpStatusCode.NotFound, new { error = ApiResponseMessages.UserNotFound });
+            throw new HttpResponseException(HttpStatusCode.NotFound, ApiResponseMessages.UserNotFound);
 
         var accounts = await bankAccountService.GetBankAccountsByUserIdAsync(userId);
 
-        return BuildResponse(HttpStatusCode.OK, new UserProfileResponse 
-        { 
-            Id = user.Id, 
-            Username = user.Username,
-            Name = user.Name, 
-            Status = user.Status, 
-            Accounts = accounts });
-    }
-
-    private async Task<APIGatewayProxyResponse> AddBalance(APIGatewayProxyRequest request)
-    {
-        var bankAccountService = _serviceProvider.GetRequiredService<IBankAccountService>();
-
-        if (!TryValidateToken(request, out var userId))
-            return BuildResponse(HttpStatusCode.Unauthorized, new { error = ApiResponseMessages.InvalidToken });
-
-        if (!RequestParserHelper.TryParseRequest<AddBalanceRequest>(request.Body, out var addBalanceRequest, out var errorMessage))
-            return BuildResponse(HttpStatusCode.BadRequest, errorMessage!);
-
-        if (!await bankAccountService.AccountBelongsToUserAsync(addBalanceRequest!.AccountId, userId))
-            return BuildResponse(HttpStatusCode.Forbidden, new { error = ApiResponseMessages.AccountNotBelongToUser });
-
-        if (!await bankAccountService.AddBalanceAsync(addBalanceRequest.AccountId, addBalanceRequest.Amount))
-            return BuildResponse(HttpStatusCode.InternalServerError, new { error = ApiResponseMessages.AddBalanceFailed });
-
-        return BuildResponse(HttpStatusCode.OK, new { message = ApiResponseMessages.AddBalanceSuccess });
-    }
-
-    private async Task<APIGatewayProxyResponse> DebitBalance(APIGatewayProxyRequest request)
-    {
-        var bankAccountService = _serviceProvider.GetRequiredService<IBankAccountService>();
-
-        if (!TryValidateToken(request, out var userId))
-            return BuildResponse(HttpStatusCode.Unauthorized, new { error = ApiResponseMessages.InvalidToken });
-
-        if (!RequestParserHelper.TryParseRequest<DebitBalanceRequest>(request.Body, out var debitBalanceRequest, out var errorMessage))
-            return BuildResponse(HttpStatusCode.BadRequest, errorMessage!);
-
-        if (!await bankAccountService.AccountBelongsToUserAsync(debitBalanceRequest!.AccountId, userId))
-            return BuildResponse(HttpStatusCode.Forbidden, new { error = ApiResponseMessages.AccountNotBelongToUser });
-
-        if (!await bankAccountService.DebitBalanceAsync(debitBalanceRequest.AccountId, debitBalanceRequest.Amount))
-            return BuildResponse(HttpStatusCode.BadRequest, new { error = ApiResponseMessages.InsufficientBalance });
-
-        return BuildResponse(HttpStatusCode.OK, new { message = ApiResponseMessages.DebitBalanceSuccess });
-    }
-
-    private bool TryValidateToken(APIGatewayProxyRequest request, out Guid userId)
-    {
-        if (!request.Headers.TryGetValue("Authorization", out var authorization) || string.IsNullOrWhiteSpace(authorization))
+        return BuildResponse(HttpStatusCode.OK, new UserProfileResponse
         {
-            userId = Guid.Empty;
-            return false;
-        }
-
-        var token = authorization.Replace("Bearer ", "", StringComparison.OrdinalIgnoreCase);
-        return _jwtTokenValidator.ValidateToken(token, out userId);
+            Username = user.Username,
+            Name = user.Name,
+            Status = user.Status,
+            Accounts = accounts.Select(account => new BankAccountResponse
+            {
+                Id = account.Id,
+                AccountType = account.AccountType,
+                Balance = account.Balance,
+                Currency = account.Currency,
+            }).ToList()
+        });
     }
 
     private APIGatewayProxyResponse BuildPreflightResponse() =>
