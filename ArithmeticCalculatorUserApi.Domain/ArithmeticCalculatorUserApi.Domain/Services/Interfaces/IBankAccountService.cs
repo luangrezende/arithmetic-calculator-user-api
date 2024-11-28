@@ -4,7 +4,7 @@ namespace ArithmeticCalculatorUserApi.Domain.Services.Interfaces
 {
     public interface IBankAccountService
     {
-        Task<List<BankAccountDTO>> GetBankAccountsByUserIdAsync(Guid userId);
+        Task<List<BankAccountDTO>?> GetBankAccountsByUserIdAsync(Guid userId);
 
         Task<bool> AccountExistsAsync(Guid accountId);
 

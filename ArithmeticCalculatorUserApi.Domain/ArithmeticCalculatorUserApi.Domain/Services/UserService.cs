@@ -17,7 +17,7 @@ namespace ArithmeticCalculatorUserApi.Domain.Services
         {
             var result = await _userRepository.AuthenticateAsync(username, password);
 
-            return new UserAutheticateDTO 
+            return result == null ? null : new UserAutheticateDTO
             {
                 Id = result!.Id,
                 Username = result.Username,
@@ -36,7 +36,7 @@ namespace ArithmeticCalculatorUserApi.Domain.Services
         {
             var result = await _userRepository.GetUserByIdAsync(userId);
 
-            return new UserAutheticateDTO
+            return result == null ? null : new UserAutheticateDTO
             {
                 Id = result!.Id,
                 Username = result.Username,
