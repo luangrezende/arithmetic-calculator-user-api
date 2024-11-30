@@ -5,6 +5,7 @@ using Amazon.Lambda.APIGatewayEvents;
 using Amazon.Lambda.Core;
 using ArithmeticCalculatorUserApi.Domain.Constants;
 using ArithmeticCalculatorUserApi.Domain.Enums;
+using ArithmeticCalculatorUserApi.Domain.Models;
 using ArithmeticCalculatorUserApi.Domain.Models.Request;
 using ArithmeticCalculatorUserApi.Domain.Models.Response;
 using ArithmeticCalculatorUserApi.Domain.Repositories;
@@ -218,7 +219,10 @@ public class Function
     {
         var userService = _serviceProvider.GetRequiredService<IUserService>();
 
-        var user = ParseRequestOrThrow<UserCreationRequest>(request.Body);
+        var user = ParseRequestOrThrow<UserRegisterRequest>(request.Body);
+
+        if (!user.IsValid())
+            throw new HttpResponseException(HttpStatusCode.BadRequest, ApiResponseMessages.UserPasswordMatchError);
 
         if (await userService.UserExistsAsync(user.Username))
             throw new HttpResponseException(HttpStatusCode.Conflict, ApiResponseMessages.UsernameAlreadyExists);
@@ -235,10 +239,7 @@ public class Function
         var userService = _serviceProvider.GetRequiredService<IUserService>();
         var bankAccountService = _serviceProvider.GetRequiredService<IBankAccountService>();
 
-        var user = await userService.GetUserByIdAsync(userId);
-        if (user == null)
-            throw new HttpResponseException(HttpStatusCode.NotFound, ApiResponseMessages.UserNotFound);
-
+        var user = await userService.GetUserByIdAsync(userId) ?? throw new HttpResponseException(HttpStatusCode.NotFound, ApiResponseMessages.UserNotFound);
         var accounts = await bankAccountService.GetBankAccountsByUserIdAsync(userId);
 
         return BuildResponse(HttpStatusCode.OK, new UserProfileResponse

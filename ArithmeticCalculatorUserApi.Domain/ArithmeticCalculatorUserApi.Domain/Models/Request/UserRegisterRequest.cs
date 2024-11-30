@@ -3,9 +3,8 @@ using System.Text.Json.Serialization;
 
 namespace ArithmeticCalculatorUserApi.Domain.Models.Request
 {
-    public class UserCreationRequest
+    public class UserRegisterRequest
     {
-
         [Required(ErrorMessage = "username is required.")]
         [JsonPropertyName("username")]
         public string Username { get; set; }
@@ -21,5 +20,11 @@ namespace ArithmeticCalculatorUserApi.Domain.Models.Request
         [Required(ErrorMessage = "name is required.")]
         [JsonPropertyName("name")]
         public string Name { get; set; }
+
+        public bool IsValid()
+        {
+            return string.Equals(Password, ConfirmPassword);
+        }
     }
+
 }
