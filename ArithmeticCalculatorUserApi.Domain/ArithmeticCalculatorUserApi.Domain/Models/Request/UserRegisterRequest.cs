@@ -14,7 +14,7 @@ namespace ArithmeticCalculatorUserApi.Domain.Models.Request
         public string Password { get; set; }
 
         [Required(ErrorMessage = "confirmpassword is required.")]
-        [JsonPropertyName("confirmpassword")]
+        [JsonPropertyName("confirmPassword")]
         public string ConfirmPassword { get; set; }
 
         [Required(ErrorMessage = "name is required.")]
