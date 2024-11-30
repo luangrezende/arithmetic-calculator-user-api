@@ -1,8 +1,9 @@
-﻿using System.Text.Json.Serialization;
+﻿using ArithmeticCalculatorUserApi.Domain.Enums;
+using System.Text.Json.Serialization;
 
 namespace ArithmeticCalculatorUserApi.Domain.Models.DTO
 {
-    public class UserAutheticateDTO
+    public class UserDTO
     {
         [JsonPropertyName("id")]
         public Guid Id { get; set; }
@@ -17,6 +18,11 @@ namespace ArithmeticCalculatorUserApi.Domain.Models.DTO
         public string Status { get; set; }
 
         [JsonPropertyName("accounts")]
-        public IEnumerable<BankAccount> Accounts { get; set; }
+        public IEnumerable<BankAccountDTO> Accounts { get; set; }
+
+        public bool IsActive()
+        {
+            return Status?.ToString()!.Equals(UserStatus.Active.ToString(), StringComparison.OrdinalIgnoreCase) ?? false;
+        }
     }
 }

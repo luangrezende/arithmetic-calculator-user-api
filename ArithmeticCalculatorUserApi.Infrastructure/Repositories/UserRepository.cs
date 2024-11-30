@@ -1,10 +1,8 @@
 ﻿using System.Data;
-using ArithmeticCalculatorUserApi.Domain.Models;
-using ArithmeticCalculatorUserApi.Domain.Repositories;
 using ArithmeticCalculatorUserApi.Infrastructure.Security;
 using ArithmeticCalculatorUserApi.Infrastructure.Extensions;
 using MySql.Data.MySqlClient;
-using ArithmeticCalculatorUserApi.Domain.Enums;
+using ArithmeticCalculatorUserApi.Infrastructure.Models;
 
 namespace ArithmeticCalculatorUserApi.Infrastructure.Repositories
 {
@@ -21,7 +19,7 @@ namespace ArithmeticCalculatorUserApi.Infrastructure.Repositories
             _promotionalAmount = decimal.Parse(Environment.GetEnvironmentVariable("promotionalAmount") ?? throw new InvalidOperationException("Promotional amount is not set."));
         }
 
-        public async Task<User?> AuthenticateAsync(string username, string password)
+        public async Task<UserEntity?> AuthenticateAsync(string username, string password)
         {
             const string query = @"
                 SELECT u.id, u.username, u.password, u.name, us.description AS status 
@@ -53,22 +51,6 @@ namespace ArithmeticCalculatorUserApi.Infrastructure.Repositories
             });
 
             return Convert.ToInt32(result) > 0;
-        }
-
-        public async Task<bool> UserIsActiveAsync(string username)
-        {
-            const string query = @"
-                SELECT us.description 
-                FROM user u
-                INNER JOIN user_status us ON u.user_status_id = us.id
-                WHERE u.username = @Username";
-
-            var status = await ExecuteScalarAsync(query, new Dictionary<string, object>
-            {
-                { "@Username", username }
-            });
-
-            return status?.ToString()!.Equals(UserStatus.Active.ToString(), StringComparison.OrdinalIgnoreCase) ?? false;
         }
 
         public async Task<bool> CreateUserAsync(string username, string password, string name)
@@ -111,7 +93,7 @@ namespace ArithmeticCalculatorUserApi.Infrastructure.Repositories
             }
         }
 
-        public async Task<User?> GetUserByIdAsync(Guid userId)
+        public async Task<UserEntity?> GetUserByIdAsync(Guid userId)
         {
             const string query = @"
                 SELECT u.id, u.username, u.name, us.description AS status 
@@ -125,7 +107,21 @@ namespace ArithmeticCalculatorUserApi.Infrastructure.Repositories
             });
         }
 
-        private async Task<User?> GetUserFromQueryAsync(string query, Dictionary<string, object> parameters)
+        public async Task<UserEntity?> GetUserByUsernameAsync(string username)
+        {
+            const string query = @"
+                SELECT u.id, u.username, u.password, u.name, us.description AS status 
+                FROM user u
+                INNER JOIN user_status us ON u.user_status_id = us.id
+                WHERE u.username = @Username";
+
+            return await GetUserFromQueryAsync(query, new Dictionary<string, object>
+            {
+                { "@Username", username }
+            });
+        }
+
+        private async Task<UserEntity?> GetUserFromQueryAsync(string query, Dictionary<string, object> parameters)
         {
             using var connection = new MySqlConnection(_connectionString);
             await connection.OpenAsync();
@@ -139,7 +135,7 @@ namespace ArithmeticCalculatorUserApi.Infrastructure.Repositories
             using var reader = await cmd.ExecuteReaderAsync();
             if (reader.Read())
             {
-                return new User
+                return new UserEntity
                 {
                     Id = reader.GetGuid("id"),
                     Username = reader.GetString("username"),

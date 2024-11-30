@@ -6,8 +6,6 @@ namespace ArithmeticCalculatorUserApi.Domain.Services.Interfaces
     {
         Task<List<BankAccountDTO>?> GetBankAccountsByUserIdAsync(Guid userId);
 
-        Task<bool> AccountExistsAsync(Guid accountId);
-
         Task<bool> AddBalanceAsync(Guid accountId, decimal amount);
 
         Task<bool> DebitBalanceAsync(Guid accountId, decimal amount);

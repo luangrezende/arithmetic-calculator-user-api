@@ -7,7 +7,6 @@ using ArithmeticCalculatorUserApi.Domain.Constants;
 using ArithmeticCalculatorUserApi.Domain.Enums;
 using ArithmeticCalculatorUserApi.Domain.Models.Request;
 using ArithmeticCalculatorUserApi.Domain.Models.Response;
-using ArithmeticCalculatorUserApi.Domain.Repositories;
 using ArithmeticCalculatorUserApi.Domain.Services;
 using ArithmeticCalculatorUserApi.Domain.Services.Interfaces;
 using ArithmeticCalculatorUserApi.Helpers;
@@ -36,12 +35,12 @@ public class Function
         services.AddScoped<IUserService, UserService>();
         services.AddScoped<IRefreshTokenService, RefreshTokenService>();
         services.AddScoped<IBankAccountService, BankAccountService>();
+        services.AddScoped<ITokenGeneratorService, TokenGeneratorService>();
 
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IBankAccountRepository, BankAccountRepository>();
         services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
 
-        services.AddScoped(sp => new JwtTokenGenerator(Environment.GetEnvironmentVariable("jwtSecretKey")!));
         services.AddScoped(sp => new JwtTokenValidator(Environment.GetEnvironmentVariable("jwtSecretKey")!));
     }
 
@@ -72,6 +71,11 @@ public class Function
         {
             context.Logger.LogError($"SecurityTokenExpiredException: {ex.Message}");
             return BuildResponse(HttpStatusCode.Unauthorized, new { error = ApiResponseMessages.TokenExpired });
+        } 
+        catch (SecurityTokenMalformedException ex)
+        {
+            context.Logger.LogError($"SecurityTokenMalformedException: {ex.Message}");
+            return BuildResponse(HttpStatusCode.BadRequest, new { error = ApiResponseMessages.InvalidToken });
         }
         catch (Exception ex)
         {
@@ -169,7 +173,7 @@ public class Function
     {
         var userService = _serviceProvider.GetRequiredService<IUserService>();
         var refreshTokenService = _serviceProvider.GetRequiredService<IRefreshTokenService>();
-        var jwtTokenGenerator = _serviceProvider.GetRequiredService<JwtTokenGenerator>();
+        var jwtTokenGenerator = _serviceProvider.GetRequiredService<ITokenGeneratorService>();
 
         var refreshTokenRequest = ParseRequestOrThrow<RefreshTokenRequest>(request.Body);
 
@@ -181,6 +185,10 @@ public class Function
 
         var user = await userService.GetUserByIdAsync(storedRefreshToken.UserId) 
             ?? throw new HttpResponseException(HttpStatusCode.NotFound, ApiResponseMessages.UserNotFound);
+
+        if (!user.IsActive())
+            throw new HttpResponseException(HttpStatusCode.Conflict, ApiResponseMessages.UserInactive);
+
         var newAccessToken = jwtTokenGenerator.GenerateToken(user);
         var token = await refreshTokenService.AddAsync(user.Id);
 
@@ -196,14 +204,18 @@ public class Function
     {
         var userService = _serviceProvider.GetRequiredService<IUserService>();
         var refreshTokenService = _serviceProvider.GetRequiredService<IRefreshTokenService>();
-        var jwtTokenGenerator = _serviceProvider.GetRequiredService<JwtTokenGenerator>();
+        var jwtTokenGenerator = _serviceProvider.GetRequiredService<ITokenGeneratorService>();
 
-        var user = ParseRequestOrThrow<TokenRequest>(request.Body);
+        var loginRequest = ParseRequestOrThrow<TokenRequest>(request.Body);
 
-        if (!await userService.UserIsActiveAsync(user.Username))
+        var user = await userService.GetUserByUsernameAsync(loginRequest.Username);
+
+        if (!user!.IsActive())
             throw new HttpResponseException(HttpStatusCode.Conflict, ApiResponseMessages.UserInactive);
 
-        var result = await userService.AuthenticateAsync(user.Username, user.Password) ?? throw new HttpResponseException(HttpStatusCode.Unauthorized, ApiResponseMessages.InvalidCredentials);
+        var result = await userService.AuthenticateAsync(user.Username, loginRequest.Password) 
+            ?? throw new HttpResponseException(HttpStatusCode.Unauthorized, ApiResponseMessages.InvalidCredentials);
+
         var accessToken = jwtTokenGenerator.GenerateToken(result);
         var token = await refreshTokenService.AddAsync(result.Id);
 
@@ -219,15 +231,17 @@ public class Function
     {
         var userService = _serviceProvider.GetRequiredService<IUserService>();
 
-        var user = ParseRequestOrThrow<UserRegisterRequest>(request.Body);
+        var userRegisterRequest = ParseRequestOrThrow<UserRegisterRequest>(request.Body);
 
-        if (!user.IsValid())
+        if (!userRegisterRequest.IsValid())
             throw new HttpResponseException(HttpStatusCode.BadRequest, ApiResponseMessages.UserPasswordMatchError);
 
-        if (await userService.UserExistsAsync(user.Username))
+        var userFound = await userService.GetUserByUsernameAsync(userRegisterRequest.Username);
+
+        if (userFound != null)
             throw new HttpResponseException(HttpStatusCode.Conflict, ApiResponseMessages.UsernameAlreadyExists);
 
-        if (!await userService.CreateUserAsync(user.Username, user.Password, user.Name))
+        if (!await userService.CreateUserAsync(userRegisterRequest.Username, userRegisterRequest.Password, userRegisterRequest.Name))
             throw new HttpResponseException(HttpStatusCode.InternalServerError, ApiResponseMessages.ErrorCreatingUser);
 
         return BuildResponse(HttpStatusCode.Created, new { message = ApiResponseMessages.UserCreatedSuccessfully });

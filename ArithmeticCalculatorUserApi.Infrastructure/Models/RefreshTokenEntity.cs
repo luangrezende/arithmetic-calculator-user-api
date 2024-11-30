@@ -1,8 +1,7 @@
-﻿using ArithmeticCalculatorUserApi.Domain.Enums;
-
-namespace ArithmeticCalculatorUserApi.Domain.Models
+﻿
+namespace ArithmeticCalculatorUserApi.Infrastructure.Models
 {
-    public class RefreshToken
+    public class RefreshTokenEntity
     {
         public Guid Id { get; set; } = Guid.NewGuid();
 
@@ -10,7 +9,7 @@ namespace ArithmeticCalculatorUserApi.Domain.Models
 
         public string Token { get; set; } = Guid.NewGuid().ToString();
 
-        public DateTime ExpiresAt { get; set; } = DateTime.UtcNow.AddHours((int)TokenConfiguration.RefreshTokenExpirationTimeInHours);
+        public DateTime ExpiresAt { get; set; }
 
         public bool IsRevoked { get; set; } = false;
 
