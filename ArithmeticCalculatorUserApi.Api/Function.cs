@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations;
 using System.Net;
 using System.Text.Json;
 using Amazon.Lambda.APIGatewayEvents;
@@ -82,6 +83,20 @@ public class Function
     {
         if (!RequestParserHelper.TryParseRequest<T>(requestBody, out var parsedRequest, out var errorMessage))
             throw new HttpResponseException(HttpStatusCode.BadRequest, errorMessage!);
+
+        var validationResults = new List<ValidationResult>();
+        var validationContext = new ValidationContext(parsedRequest!);
+
+        if (!Validator.TryValidateObject(parsedRequest!, validationContext, validationResults, true))
+        {
+            var errorMessages = validationResults
+                .Select(result => result.ErrorMessage)
+                .Where(msg => !string.IsNullOrWhiteSpace(msg))
+                .ToList();
+
+            throw new HttpResponseException(HttpStatusCode.BadRequest, errorMessage!); ;
+        }
+
         return parsedRequest!;
     }
 
@@ -118,14 +133,21 @@ public class Function
                 : ApiResponseMessages.InsufficientBalance);
     }
 
-
     private async Task<APIGatewayProxyResponse> AddBalance(APIGatewayProxyRequest request)
     {
         var userId = ValidateTokenOrThrow(request);
         var addBalanceRequest = ParseRequestOrThrow<UpdateBalanceRequest>(request.Body);
 
-        if (addBalanceRequest.Amount <= 0)
-            return BuildResponse(HttpStatusCode.BadRequest, new { error = ApiResponseMessages.InvalidAmount });
+        if (addBalanceRequest.Amount <= (int)BalanceConfiguration.BalanceMinimumValue 
+            || addBalanceRequest.Amount > (int)BalanceConfiguration.BalanceMaximumValue)
+        {
+            return BuildResponse(HttpStatusCode.BadRequest, new
+            {
+                error = addBalanceRequest.Amount > (int)BalanceConfiguration.BalanceMaximumValue
+                    ? ApiResponseMessages.ExceededMaximumAmount
+                    : ApiResponseMessages.InvalidAmount
+            });
+        }
 
         await UpdateBalanceAsync(userId, addBalanceRequest.AccountId, addBalanceRequest.Amount, BalanceOperation.Add);
 
@@ -224,7 +246,7 @@ public class Function
             Username = user.Username,
             Name = user.Name,
             Status = user.Status,
-            Accounts = accounts.Select(account => new BankAccountResponse
+            Accounts = accounts!.Select(account => new BankAccountResponse
             {
                 Id = account.Id,
                 AccountType = account.AccountType,
