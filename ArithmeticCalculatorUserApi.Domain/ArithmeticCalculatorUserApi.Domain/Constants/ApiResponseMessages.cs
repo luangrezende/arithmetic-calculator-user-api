@@ -21,11 +21,13 @@
         public const string InvalidToken = "Invalid token.";
         public const string TokenExpired = "Token expired.";
         public const string UserNotFound = "User not found.";
+        public const string UserPasswordMatchError = "Password and ConfirmPassword must match.";
         public const string InsufficientBalance = "Insufficient balance to complete the transaction.";
         public const string DebitBalanceSuccess = "Balance debited successfully.";
-        public const string InvalidAmount = "The amount must be greater than zero.";
         public const string AccountNotBelongToUser = "The specified account does not belong to the authenticated user.";
         public const string InvalidRefreshToken = "Invalid refresh token.";
         public const string MissingRefreshToken = "The refresh token is missing.";
+        public const string InvalidAmount = "The amount must be greater than zero.";
+        public const string ExceededMaximumAmount = "The maximum amount you can add is $500.";
     }
 }

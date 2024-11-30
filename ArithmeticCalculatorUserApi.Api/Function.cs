@@ -1,9 +1,11 @@
+using System.ComponentModel.DataAnnotations;
 using System.Net;
 using System.Text.Json;
 using Amazon.Lambda.APIGatewayEvents;
 using Amazon.Lambda.Core;
 using ArithmeticCalculatorUserApi.Domain.Constants;
 using ArithmeticCalculatorUserApi.Domain.Enums;
+using ArithmeticCalculatorUserApi.Domain.Models;
 using ArithmeticCalculatorUserApi.Domain.Models.Request;
 using ArithmeticCalculatorUserApi.Domain.Models.Response;
 using ArithmeticCalculatorUserApi.Domain.Repositories;
@@ -82,6 +84,20 @@ public class Function
     {
         if (!RequestParserHelper.TryParseRequest<T>(requestBody, out var parsedRequest, out var errorMessage))
             throw new HttpResponseException(HttpStatusCode.BadRequest, errorMessage!);
+
+        var validationResults = new List<ValidationResult>();
+        var validationContext = new ValidationContext(parsedRequest!);
+
+        if (!Validator.TryValidateObject(parsedRequest!, validationContext, validationResults, true))
+        {
+            var errorMessages = validationResults
+                .Select(result => result.ErrorMessage)
+                .Where(msg => !string.IsNullOrWhiteSpace(msg))
+                .ToList();
+
+            throw new HttpResponseException(HttpStatusCode.BadRequest, errorMessage!); ;
+        }
+
         return parsedRequest!;
     }
 
@@ -118,14 +134,21 @@ public class Function
                 : ApiResponseMessages.InsufficientBalance);
     }
 
-
     private async Task<APIGatewayProxyResponse> AddBalance(APIGatewayProxyRequest request)
     {
         var userId = ValidateTokenOrThrow(request);
         var addBalanceRequest = ParseRequestOrThrow<UpdateBalanceRequest>(request.Body);
 
-        if (addBalanceRequest.Amount <= 0)
-            return BuildResponse(HttpStatusCode.BadRequest, new { error = ApiResponseMessages.InvalidAmount });
+        if (addBalanceRequest.Amount <= (int)BalanceConfiguration.BalanceMinimumValue 
+            || addBalanceRequest.Amount > (int)BalanceConfiguration.BalanceMaximumValue)
+        {
+            return BuildResponse(HttpStatusCode.BadRequest, new
+            {
+                error = addBalanceRequest.Amount > (int)BalanceConfiguration.BalanceMaximumValue
+                    ? ApiResponseMessages.ExceededMaximumAmount
+                    : ApiResponseMessages.InvalidAmount
+            });
+        }
 
         await UpdateBalanceAsync(userId, addBalanceRequest.AccountId, addBalanceRequest.Amount, BalanceOperation.Add);
 
@@ -196,7 +219,10 @@ public class Function
     {
         var userService = _serviceProvider.GetRequiredService<IUserService>();
 
-        var user = ParseRequestOrThrow<UserCreationRequest>(request.Body);
+        var user = ParseRequestOrThrow<UserRegisterRequest>(request.Body);
+
+        if (!user.IsValid())
+            throw new HttpResponseException(HttpStatusCode.BadRequest, ApiResponseMessages.UserPasswordMatchError);
 
         if (await userService.UserExistsAsync(user.Username))
             throw new HttpResponseException(HttpStatusCode.Conflict, ApiResponseMessages.UsernameAlreadyExists);
@@ -213,10 +239,7 @@ public class Function
         var userService = _serviceProvider.GetRequiredService<IUserService>();
         var bankAccountService = _serviceProvider.GetRequiredService<IBankAccountService>();
 
-        var user = await userService.GetUserByIdAsync(userId);
-        if (user == null)
-            throw new HttpResponseException(HttpStatusCode.NotFound, ApiResponseMessages.UserNotFound);
-
+        var user = await userService.GetUserByIdAsync(userId) ?? throw new HttpResponseException(HttpStatusCode.NotFound, ApiResponseMessages.UserNotFound);
         var accounts = await bankAccountService.GetBankAccountsByUserIdAsync(userId);
 
         return BuildResponse(HttpStatusCode.OK, new UserProfileResponse
@@ -224,7 +247,7 @@ public class Function
             Username = user.Username,
             Name = user.Name,
             Status = user.Status,
-            Accounts = accounts.Select(account => new BankAccountResponse
+            Accounts = accounts!.Select(account => new BankAccountResponse
             {
                 Id = account.Id,
                 AccountType = account.AccountType,
