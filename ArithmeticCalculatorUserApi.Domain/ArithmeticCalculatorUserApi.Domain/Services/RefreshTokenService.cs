@@ -44,9 +44,9 @@ namespace ArithmeticCalculatorUserApi.Domain.Services
             };
         }
 
-        public async Task InvalidateTokenAsync(string token)
+        public async Task<bool> InvalidateTokenAsync(string token)
         {
-            await _refreshTokenRepository.InvalidateTokenAsync(token);
+            return await _refreshTokenRepository.InvalidateTokenAsync(token);
         }
     }
 }

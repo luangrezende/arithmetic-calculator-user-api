@@ -55,6 +55,7 @@ public class Function
             {
                 "GET" when request.Path == "/v1/user/auth/profile" => await GetProfile(request),
                 "POST" when request.Path == "/v1/user/auth/login" => await Login(request),
+                "POST" when request.Path == "/v1/user/auth/logout" => await Logout(request),
                 "POST" when request.Path == "/v1/user/auth/refresh" => await RefreshToken(request),
                 "POST" when request.Path == "/v1/user/auth/register" => await Register(request),
                 "POST" when request.Path == "/v1/user/account/balance" => await AddBalance(request),
@@ -224,6 +225,23 @@ public class Function
             Token = accessToken,
             RefreshToken = token,
             Expiration = (int)TokenConfiguration.AccessTokenExpirationTimeInSeconds
+        });
+    }
+
+    private async Task<APIGatewayProxyResponse> Logout(APIGatewayProxyRequest request)
+    {
+        var refreshTokenService = _serviceProvider.GetRequiredService<IRefreshTokenService>();
+
+        var logoutRequest = ParseRequestOrThrow<RefreshTokenRequest>(request.Body);
+
+        var isRevoked = await refreshTokenService.InvalidateTokenAsync(logoutRequest.RefreshToken);
+
+        if (!isRevoked)
+            throw new HttpResponseException(HttpStatusCode.BadRequest, ApiResponseMessages.InvalidToken);
+
+        return BuildResponse(HttpStatusCode.OK, new
+        {
+            message = ApiResponseMessages.LogoutSuccessful
         });
     }
 

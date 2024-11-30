@@ -8,6 +8,6 @@ namespace ArithmeticCalculatorUserApi.Infrastructure.Repositories
 
         Task<RefreshTokenEntity?> GetByTokenAsync(string token);
 
-        Task InvalidateTokenAsync(string token);
+        Task<bool> InvalidateTokenAsync(string token);
     }
 }
