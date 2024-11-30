@@ -1,7 +1,8 @@
-﻿using ArithmeticCalculatorUserApi.Domain.Models;
+﻿using ArithmeticCalculatorUserApi.Domain.Enums;
 using ArithmeticCalculatorUserApi.Domain.Models.DTO;
-using ArithmeticCalculatorUserApi.Domain.Repositories;
 using ArithmeticCalculatorUserApi.Domain.Services.Interfaces;
+using ArithmeticCalculatorUserApi.Infrastructure.Models;
+using ArithmeticCalculatorUserApi.Infrastructure.Repositories;
 
 namespace ArithmeticCalculatorUserApi.Domain.Services
 {
@@ -16,8 +17,9 @@ namespace ArithmeticCalculatorUserApi.Domain.Services
 
         public async Task<string> AddAsync(Guid userId)
         {
-            var newRefreshToken = new RefreshToken
+            var newRefreshToken = new RefreshTokenEntity
             {
+                ExpiresAt = DateTime.UtcNow.AddHours((int)TokenConfiguration.RefreshTokenExpirationTimeInHours),
                 UserId = userId
             };
 

@@ -1,5 +1,4 @@
-﻿using ArithmeticCalculatorUserApi.Domain.Models;
-using ArithmeticCalculatorUserApi.Domain.Repositories;
+﻿using ArithmeticCalculatorUserApi.Infrastructure.Models;
 using MySql.Data.MySqlClient;
 using System.Data;
 
@@ -22,44 +21,14 @@ namespace ArithmeticCalculatorUserApi.Infrastructure.Repositories
                 FROM bank_account
                 WHERE id = @AccountId AND user_id = @UserId";
 
-            try
-            {
-                using var connection = new MySqlConnection(_connectionString);
-                await connection.OpenAsync();
+            using var connection = new MySqlConnection(_connectionString);
+            await connection.OpenAsync();
 
-                return Convert.ToInt32(await ExecuteScalarAsync(query, new Dictionary<string, object>
-                {
-                    { "@AccountId", accountId },
-                    { "@UserId", userId }
-                }, connection)) > 0;
-            }
-            catch (Exception ex)
+            return Convert.ToInt32(await ExecuteScalarAsync(query, new Dictionary<string, object>
             {
-                throw new DataException("Error while verifying account ownership.", ex);
-            }
-        }
-
-        public async Task<bool> AccountExistsAsync(Guid accountId)
-        {
-            const string query = @"
-                SELECT COUNT(1)
-                FROM bank_account
-                WHERE id = @AccountId";
-
-            try
-            {
-                using var connection = new MySqlConnection(_connectionString);
-                await connection.OpenAsync();
-
-                return Convert.ToInt32(await ExecuteScalarAsync(query, new Dictionary<string, object>
-                {
-                    { "@AccountId", accountId }
-                }, connection)) > 0;
-            }
-            catch (Exception ex)
-            {
-                throw new DataException("Error while checking account existence.", ex);
-            }
+                { "@AccountId", accountId },
+                { "@UserId", userId }
+            }, connection)) > 0;
         }
 
         public async Task<bool> AddBalanceAsync(Guid accountId, decimal amount)
@@ -70,21 +39,14 @@ namespace ArithmeticCalculatorUserApi.Infrastructure.Repositories
                     updated_at = CURRENT_TIMESTAMP
                 WHERE id = @AccountId";
 
-            try
-            {
-                using var connection = new MySqlConnection(_connectionString);
-                await connection.OpenAsync();
+            using var connection = new MySqlConnection(_connectionString);
+            await connection.OpenAsync();
 
-                return await ExecuteNonQueryAsync(query, new Dictionary<string, object>
-                {
-                    { "@Amount", amount },
-                    { "@AccountId", accountId }
-                }, connection) > 0;
-            }
-            catch (Exception ex)
+            return await ExecuteNonQueryAsync(query, new Dictionary<string, object>
             {
-                throw new DataException("Error while adding balance to account.", ex);
-            }
+                { "@Amount", amount },
+                { "@AccountId", accountId }
+            }, connection) > 0;
         }
 
         public async Task<bool> DebitBalanceAsync(Guid accountId, decimal amount)
@@ -100,34 +62,27 @@ namespace ArithmeticCalculatorUserApi.Infrastructure.Repositories
                     updated_at = CURRENT_TIMESTAMP
                 WHERE id = @AccountId";
 
-            try
+            using var connection = new MySqlConnection(_connectionString);
+            await connection.OpenAsync();
+
+            var balanceObj = await ExecuteScalarAsync(checkBalanceQuery, new Dictionary<string, object>
             {
-                using var connection = new MySqlConnection(_connectionString);
-                await connection.OpenAsync();
+                { "@AccountId", accountId }
+            }, connection);
 
-                var balanceObj = await ExecuteScalarAsync(checkBalanceQuery, new Dictionary<string, object>
-                {
-                    { "@AccountId", accountId }
-                }, connection);
-
-                if (balanceObj == null || Convert.ToDecimal(balanceObj) < amount)
-                {
-                    return false;
-                }
-
-                return await ExecuteNonQueryAsync(debitQuery, new Dictionary<string, object>
-                {
-                    { "@Amount", amount },
-                    { "@AccountId", accountId }
-                }, connection) > 0;
-            }
-            catch (Exception ex)
+            if (balanceObj == null || Convert.ToDecimal(balanceObj) < amount)
             {
-                throw new DataException("Error while debiting balance from account.", ex);
+                return false;
             }
+
+            return await ExecuteNonQueryAsync(debitQuery, new Dictionary<string, object>
+            {
+                { "@Amount", amount },
+                { "@AccountId", accountId }
+            }, connection) > 0;
         }
 
-        public async Task<IEnumerable<BankAccount>> GetBankAccountsByUserIdAsync(Guid userId)
+        public async Task<IEnumerable<BankAccountEntity>> GetBankAccountsByUserIdAsync(Guid userId)
         {
             const string query = @"
                 SELECT 
@@ -137,33 +92,26 @@ namespace ArithmeticCalculatorUserApi.Infrastructure.Repositories
                 FROM bank_account 
                 WHERE user_id = @UserId";
 
-            try
+            using var connection = new MySqlConnection(_connectionString);
+            await connection.OpenAsync();
+
+            using var cmd = new MySqlCommand(query, connection);
+            cmd.Parameters.AddWithValue("@UserId", userId);
+
+            using var reader = await cmd.ExecuteReaderAsync();
+            var accounts = new List<BankAccountEntity>();
+
+            while (await reader.ReadAsync())
             {
-                using var connection = new MySqlConnection(_connectionString);
-                await connection.OpenAsync();
-
-                using var cmd = new MySqlCommand(query, connection);
-                cmd.Parameters.AddWithValue("@UserId", userId);
-
-                using var reader = await cmd.ExecuteReaderAsync();
-                var accounts = new List<BankAccount>();
-
-                while (await reader.ReadAsync())
+                accounts.Add(new BankAccountEntity
                 {
-                    accounts.Add(new BankAccount
-                    {
-                        Id = reader.GetGuid("id"),
-                        Balance = reader.GetDecimal("balance"),
-                        Currency = reader.GetString("currency"),
-                    });
-                }
+                    Id = reader.GetGuid("id"),
+                    Balance = reader.GetDecimal("balance"),
+                    Currency = reader.GetString("currency"),
+                });
+            }
 
-                return accounts;
-            }
-            catch (Exception ex)
-            {
-                throw new DataException("Error while retrieving bank accounts by user ID.", ex);
-            }
+            return accounts;
         }
 
         public async Task<bool> CreateBankAccountAsync(

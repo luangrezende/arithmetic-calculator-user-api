@@ -3,20 +3,21 @@ using System.Security.Claims;
 using System.Text;
 using ArithmeticCalculatorUserApi.Domain.Enums;
 using ArithmeticCalculatorUserApi.Domain.Models.DTO;
+using ArithmeticCalculatorUserApi.Domain.Services.Interfaces;
 using Microsoft.IdentityModel.Tokens;
 
 namespace ArithmeticCalculatorUserApi.Infrastructure.Security
 {
-    public class JwtTokenGenerator
+    public class TokenGeneratorService : ITokenGeneratorService
     {
         private readonly string _jwtSecret;
 
-        public JwtTokenGenerator(string jwtSecret)
+        public TokenGeneratorService()
         {
-            _jwtSecret = jwtSecret;
+            _jwtSecret = Environment.GetEnvironmentVariable("jwtSecretKey")!;
         }
 
-        public string GenerateToken(UserAutheticateDTO user)
+        public string GenerateToken(UserDTO user)
         {
             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtSecret));
             var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);

@@ -1,6 +1,7 @@
 ﻿using ArithmeticCalculatorUserApi.Domain.Models.DTO;
-using ArithmeticCalculatorUserApi.Domain.Repositories;
 using ArithmeticCalculatorUserApi.Domain.Services.Interfaces;
+using ArithmeticCalculatorUserApi.Infrastructure.Repositories;
+using ArithmeticCalculatorUserApi.Infrastructure.Security;
 
 namespace ArithmeticCalculatorUserApi.Domain.Services
 {
@@ -13,17 +14,22 @@ namespace ArithmeticCalculatorUserApi.Domain.Services
             _userRepository = userRepository;
         }
 
-        public async Task<UserAutheticateDTO?> AuthenticateAsync(string username, string password)
+        public async Task<UserDTO?> AuthenticateAsync(string username, string password)
         {
-            var result = await _userRepository.AuthenticateAsync(username, password);
+            var user = await _userRepository.GetUserByUsernameAsync(username);
 
-            return result == null ? null : new UserAutheticateDTO
+            if (user == null)
+                return null;
+
+            if (!PasswordHasher.VerifyPassword(password, user.Password!))
+                return null;
+
+            return new UserDTO
             {
-                Id = result!.Id,
-                Username = result.Username,
-                Status = result.Status,
-                Name = result.Name,
-                Accounts = result.Accounts
+                Id = user.Id,
+                Username = user.Username,
+                Status = user.Status,
+                Name = user.Name,
             };
         }
 
@@ -32,28 +38,30 @@ namespace ArithmeticCalculatorUserApi.Domain.Services
             return await _userRepository.CreateUserAsync(username, password, name);
         }
 
-        public async Task<UserAutheticateDTO?> GetUserByIdAsync(Guid userId)
+        public async Task<UserDTO?> GetUserByIdAsync(Guid userId)
         {
             var result = await _userRepository.GetUserByIdAsync(userId);
 
-            return result == null ? null : new UserAutheticateDTO
+            return result == null ? null : new UserDTO
             {
                 Id = result!.Id,
                 Username = result.Username,
                 Status = result.Status,
                 Name = result.Name,
-                Accounts = result.Accounts
             };
         }
 
-        public async Task<bool> UserExistsAsync(string username)
+        public async Task<UserDTO?> GetUserByUsernameAsync(string username)
         {
-            return await _userRepository.UserExistsAsync(username);
-        }
+            var result = await _userRepository.GetUserByUsernameAsync(username);
 
-        public async Task<bool> UserIsActiveAsync(string username)
-        {
-            return await _userRepository.UserIsActiveAsync(username);
+            return result == null ? null : new UserDTO
+            {
+                Id = result!.Id,
+                Username = result.Username,
+                Status = result.Status,
+                Name = result.Name,
+            };
         }
     }
 }

@@ -1,6 +1,6 @@
 ﻿using ArithmeticCalculatorUserApi.Domain.Models.DTO;
-using ArithmeticCalculatorUserApi.Domain.Repositories;
 using ArithmeticCalculatorUserApi.Domain.Services.Interfaces;
+using ArithmeticCalculatorUserApi.Infrastructure.Repositories;
 
 namespace ArithmeticCalculatorUserApi.Domain.Services
 {
@@ -16,11 +16,6 @@ namespace ArithmeticCalculatorUserApi.Domain.Services
         public async Task<bool> AccountBelongsToUserAsync(Guid accountId, Guid userId)
         {
             return await _bankAccountRepository.AccountBelongsToUserAsync(accountId, userId);
-        }
-
-        public async Task<bool> AccountExistsAsync(Guid accountId)
-        {
-            return await _bankAccountRepository.AccountExistsAsync(accountId);
         }
 
         public async Task<bool> AddBalanceAsync(Guid accountId, decimal amount)

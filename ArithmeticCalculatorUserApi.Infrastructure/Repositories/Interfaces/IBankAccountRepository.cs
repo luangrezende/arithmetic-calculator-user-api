@@ -1,13 +1,11 @@
-﻿using ArithmeticCalculatorUserApi.Domain.Models;
+﻿using ArithmeticCalculatorUserApi.Infrastructure.Models;
 using MySql.Data.MySqlClient;
 
-namespace ArithmeticCalculatorUserApi.Domain.Repositories
+namespace ArithmeticCalculatorUserApi.Infrastructure.Repositories
 {
     public interface IBankAccountRepository
     {
-        Task<IEnumerable<BankAccount>> GetBankAccountsByUserIdAsync(Guid userId);
-
-        Task<bool> AccountExistsAsync(Guid accountId);
+        Task<IEnumerable<BankAccountEntity>> GetBankAccountsByUserIdAsync(Guid userId);
 
         Task<bool> AddBalanceAsync(Guid accountId, decimal amount);
 
