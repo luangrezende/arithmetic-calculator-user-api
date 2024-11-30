@@ -200,10 +200,10 @@ public class Function
 
         var user = ParseRequestOrThrow<TokenRequest>(request.Body);
 
-        var result = await userService.AuthenticateAsync(user.Username, user.Password);
-        if (result == null)
-            throw new HttpResponseException(HttpStatusCode.Unauthorized, ApiResponseMessages.InvalidCredentials);
+        if (!await userService.UserIsActiveAsync(user.Username))
+            throw new HttpResponseException(HttpStatusCode.Conflict, ApiResponseMessages.UserInactive);
 
+        var result = await userService.AuthenticateAsync(user.Username, user.Password) ?? throw new HttpResponseException(HttpStatusCode.Unauthorized, ApiResponseMessages.InvalidCredentials);
         var accessToken = jwtTokenGenerator.GenerateToken(result);
         var token = await refreshTokenService.AddAsync(result.Id);
 
@@ -250,7 +250,6 @@ public class Function
             Accounts = accounts!.Select(account => new BankAccountResponse
             {
                 Id = account.Id,
-                AccountType = account.AccountType,
                 Balance = account.Balance,
                 Currency = account.Currency,
             }).ToList()

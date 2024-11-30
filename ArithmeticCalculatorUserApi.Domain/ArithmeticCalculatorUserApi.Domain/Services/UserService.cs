@@ -50,5 +50,10 @@ namespace ArithmeticCalculatorUserApi.Domain.Services
         {
             return await _userRepository.UserExistsAsync(username);
         }
+
+        public async Task<bool> UserIsActiveAsync(string username)
+        {
+            return await _userRepository.UserIsActiveAsync(username);
+        }
     }
 }
