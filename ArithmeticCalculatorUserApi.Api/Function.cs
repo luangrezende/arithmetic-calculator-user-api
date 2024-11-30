@@ -5,7 +5,6 @@ using Amazon.Lambda.APIGatewayEvents;
 using Amazon.Lambda.Core;
 using ArithmeticCalculatorUserApi.Domain.Constants;
 using ArithmeticCalculatorUserApi.Domain.Enums;
-using ArithmeticCalculatorUserApi.Domain.Models;
 using ArithmeticCalculatorUserApi.Domain.Models.Request;
 using ArithmeticCalculatorUserApi.Domain.Models.Response;
 using ArithmeticCalculatorUserApi.Domain.Repositories;
@@ -66,16 +65,17 @@ public class Function
         }
         catch (HttpResponseException ex)
         {
-            return BuildResponse(ex.StatusCode, ex.ResponseBody ?? new { error = "An error occurred." });
+            context.Logger.LogError($"HttpResponseException: {ex.Message}");
+            return BuildResponse(ex.StatusCode, new { error = ex.ResponseBody ?? "An error occurred." });
         }
         catch (SecurityTokenExpiredException ex)
         {
-            context.Logger.LogError($"SecurityTokenExpiredException: {ex}");
+            context.Logger.LogError($"SecurityTokenExpiredException: {ex.Message}");
             return BuildResponse(HttpStatusCode.Unauthorized, new { error = ApiResponseMessages.TokenExpired });
         }
         catch (Exception ex)
         {
-            context.Logger.LogError($"Unhandled exception: {ex}");
+            context.Logger.LogError($"Unhandled exception: {ex.Message}");
             return BuildResponse(HttpStatusCode.InternalServerError, new { error = "Internal server error." });
         }
     }
@@ -95,7 +95,7 @@ public class Function
                 .Where(msg => !string.IsNullOrWhiteSpace(msg))
                 .ToList();
 
-            throw new HttpResponseException(HttpStatusCode.BadRequest, errorMessage!); ;
+            throw new HttpResponseException(HttpStatusCode.BadRequest, errorMessages!.FirstOrDefault()); ;
         }
 
         return parsedRequest!;
