@@ -62,7 +62,7 @@ namespace ArithmeticCalculatorUserApi.Infrastructure.Repositories
             return null;
         }
 
-        public async Task InvalidateTokenAsync(string token)
+        public async Task<bool> InvalidateTokenAsync(string token)
         {
             const string query = @"
                 UPDATE refresh_tokens
@@ -77,7 +77,8 @@ namespace ArithmeticCalculatorUserApi.Infrastructure.Repositories
             cmd.Parameters.AddWithValue("@RevokedAt", DateTime.UtcNow);
             cmd.Parameters.AddWithValue("@Token", token);
 
-            await cmd.ExecuteNonQueryAsync();
+            var rowsAffected = await cmd.ExecuteNonQueryAsync();
+            return rowsAffected > 0;
         }
     }
 }
