@@ -11,149 +11,136 @@ namespace ArithmeticCalculatorUserApi.Infrastructure.Repositories
 
         public BankAccountRepository()
         {
-            var connectionString = Environment.GetEnvironmentVariable("mysqlConnectionString");
-            _connectionString = connectionString!;
+            _connectionString = Environment.GetEnvironmentVariable("mysqlConnectionString")
+                                ?? throw new InvalidOperationException("Connection string is not set.");
         }
 
         public async Task<bool> AccountBelongsToUserAsync(Guid accountId, Guid userId)
         {
+            const string query = @"
+                SELECT COUNT(1)
+                FROM bank_account
+                WHERE id = @AccountId AND user_id = @UserId";
+
             try
             {
                 using var connection = new MySqlConnection(_connectionString);
                 await connection.OpenAsync();
 
-                const string query = @"
-                    SELECT COUNT(1)
-                    FROM BankAccount
-                    WHERE id = @AccountId AND user_id = @UserId";
-
-                using var cmd = new MySqlCommand(query, connection);
-                cmd.Parameters.AddWithValue("@AccountId", accountId);
-                cmd.Parameters.AddWithValue("@UserId", userId);
-
-                var result = await cmd.ExecuteScalarAsync();
-                return Convert.ToInt32(result) > 0;
+                return Convert.ToInt32(await ExecuteScalarAsync(query, new Dictionary<string, object>
+                {
+                    { "@AccountId", accountId },
+                    { "@UserId", userId }
+                }, connection)) > 0;
             }
             catch (Exception ex)
             {
-                throw new DataException("Error during database operation.", ex);
+                throw new DataException("Error while verifying account ownership.", ex);
             }
         }
 
         public async Task<bool> AccountExistsAsync(Guid accountId)
         {
+            const string query = @"
+                SELECT COUNT(1)
+                FROM bank_account
+                WHERE id = @AccountId";
+
             try
             {
                 using var connection = new MySqlConnection(_connectionString);
-                connection.Open();
+                await connection.OpenAsync();
 
-                const string query = @"
-                    SELECT COUNT(1)
-                    FROM BankAccount
-                    WHERE id = @AccountId";
-
-                using var cmd = new MySqlCommand(query, connection);
-                cmd.Parameters.AddWithValue("@AccountId", accountId);
-
-                var result = await cmd.ExecuteScalarAsync();
-
-                return Convert.ToInt32(result) > 0;
+                return Convert.ToInt32(await ExecuteScalarAsync(query, new Dictionary<string, object>
+                {
+                    { "@AccountId", accountId }
+                }, connection)) > 0;
             }
             catch (Exception ex)
             {
-                throw new DataException("Error during database operation.", ex);
+                throw new DataException("Error while checking account existence.", ex);
             }
         }
 
         public async Task<bool> AddBalanceAsync(Guid accountId, decimal amount)
         {
+            const string query = @"
+                UPDATE bank_account
+                SET balance = balance + @Amount,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE id = @AccountId";
+
             try
             {
                 using var connection = new MySqlConnection(_connectionString);
                 await connection.OpenAsync();
 
-                const string query = @"
-                    UPDATE BankAccount
-                    SET balance = balance + @Amount,
-                        updated_at = CURRENT_TIMESTAMP
-                    WHERE id = @AccountId";
-
-                using var cmd = new MySqlCommand(query, connection);
-                cmd.Parameters.AddWithValue("@Amount", amount);
-                cmd.Parameters.AddWithValue("@AccountId", accountId);
-
-                var rowsAffected = await cmd.ExecuteNonQueryAsync();
-
-                return rowsAffected > 0;
+                return await ExecuteNonQueryAsync(query, new Dictionary<string, object>
+                {
+                    { "@Amount", amount },
+                    { "@AccountId", accountId }
+                }, connection) > 0;
             }
             catch (Exception ex)
             {
-                throw new DataException("Error during database operation.", ex);
+                throw new DataException("Error while adding balance to account.", ex);
             }
         }
 
         public async Task<bool> DebitBalanceAsync(Guid accountId, decimal amount)
         {
+            const string checkBalanceQuery = @"
+                SELECT balance 
+                FROM bank_account 
+                WHERE id = @AccountId";
+
+            const string debitQuery = @"
+                UPDATE bank_account
+                SET balance = balance - @Amount,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE id = @AccountId";
+
             try
             {
                 using var connection = new MySqlConnection(_connectionString);
                 await connection.OpenAsync();
 
-                const string checkBalanceQuery = @"
-                    SELECT balance 
-                    FROM BankAccount 
-                    WHERE id = @AccountId";
+                var balanceObj = await ExecuteScalarAsync(checkBalanceQuery, new Dictionary<string, object>
+                {
+                    { "@AccountId", accountId }
+                }, connection);
 
-                using var checkBalanceCmd = new MySqlCommand(checkBalanceQuery, connection);
-                checkBalanceCmd.Parameters.AddWithValue("@AccountId", accountId);
-
-                var balanceObj = await checkBalanceCmd.ExecuteScalarAsync();
-                if (balanceObj == null)
+                if (balanceObj == null || Convert.ToDecimal(balanceObj) < amount)
                 {
                     return false;
                 }
 
-                var balance = Convert.ToDecimal(balanceObj);
-                if (balance < amount)
+                return await ExecuteNonQueryAsync(debitQuery, new Dictionary<string, object>
                 {
-                    return false;
-                }
-
-                const string debitQuery = @"
-                    UPDATE BankAccount
-                    SET balance = balance - @Amount,
-                        updated_at = CURRENT_TIMESTAMP
-                    WHERE id = @AccountId";
-
-                using var debitCmd = new MySqlCommand(debitQuery, connection);
-                debitCmd.Parameters.AddWithValue("@Amount", amount);
-                debitCmd.Parameters.AddWithValue("@AccountId", accountId);
-
-                var rowsAffected = await debitCmd.ExecuteNonQueryAsync();
-
-                return rowsAffected > 0;
+                    { "@Amount", amount },
+                    { "@AccountId", accountId }
+                }, connection) > 0;
             }
             catch (Exception ex)
             {
-                throw new DataException("Error during database operation.", ex);
+                throw new DataException("Error while debiting balance from account.", ex);
             }
         }
 
         public async Task<IEnumerable<BankAccount>> GetBankAccountsByUserIdAsync(Guid userId)
         {
+            const string query = @"
+                SELECT 
+                    id, 
+                    balance, 
+                    currency 
+                FROM bank_account 
+                WHERE user_id = @UserId";
+
             try
             {
                 using var connection = new MySqlConnection(_connectionString);
-                connection.Open();
-
-                const string query = @"
-                    SELECT 
-                        id, 
-                        account_type, 
-                        balance, 
-                        currency 
-                    FROM BankAccount 
-                    WHERE user_id = @UserId";
+                await connection.OpenAsync();
 
                 using var cmd = new MySqlCommand(query, connection);
                 cmd.Parameters.AddWithValue("@UserId", userId);
@@ -166,7 +153,6 @@ namespace ArithmeticCalculatorUserApi.Infrastructure.Repositories
                     accounts.Add(new BankAccount
                     {
                         Id = reader.GetGuid("id"),
-                        AccountType = reader.GetString("account_type"),
                         Balance = reader.GetDecimal("balance"),
                         Currency = reader.GetString("currency"),
                     });
@@ -176,9 +162,57 @@ namespace ArithmeticCalculatorUserApi.Infrastructure.Repositories
             }
             catch (Exception ex)
             {
-                throw new DataException("Error during database operation.", ex);
+                throw new DataException("Error while retrieving bank accounts by user ID.", ex);
             }
         }
 
+        public async Task<bool> CreateBankAccountAsync(
+            Guid userId,
+            decimal initialBalance,
+            MySqlConnection connection,
+            MySqlTransaction transaction)
+        {
+            const string query = @"
+                INSERT INTO bank_account (id, user_id, balance) 
+                VALUES (@Id, @UserId, @Balance)";
+
+            var parameters = new Dictionary<string, object>
+            {
+                { "@Id", Guid.NewGuid() },
+                { "@UserId", userId },
+                { "@Balance", initialBalance }
+            };
+
+            return await ExecuteNonQueryAsync(query, parameters, connection, transaction) > 0;
+        }
+
+        private async Task<int> ExecuteNonQueryAsync(
+            string query,
+            Dictionary<string, object> parameters,
+            MySqlConnection connection,
+            MySqlTransaction? transaction = null)
+        {
+            using var cmd = new MySqlCommand(query, connection, transaction);
+            foreach (var param in parameters)
+            {
+                cmd.Parameters.AddWithValue(param.Key, param.Value);
+            }
+
+            return await cmd.ExecuteNonQueryAsync();
+        }
+
+        private async Task<object?> ExecuteScalarAsync(
+            string query,
+            Dictionary<string, object> parameters,
+            MySqlConnection connection)
+        {
+            using var cmd = new MySqlCommand(query, connection);
+            foreach (var param in parameters)
+            {
+                cmd.Parameters.AddWithValue(param.Key, param.Value);
+            }
+
+            return await cmd.ExecuteScalarAsync();
+        }
     }
 }

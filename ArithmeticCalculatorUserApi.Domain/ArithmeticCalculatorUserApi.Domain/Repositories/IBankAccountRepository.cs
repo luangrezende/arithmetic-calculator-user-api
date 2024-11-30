@@ -1,4 +1,5 @@
 ﻿using ArithmeticCalculatorUserApi.Domain.Models;
+using MySql.Data.MySqlClient;
 
 namespace ArithmeticCalculatorUserApi.Domain.Repositories
 {
@@ -13,5 +14,11 @@ namespace ArithmeticCalculatorUserApi.Domain.Repositories
         Task<bool> DebitBalanceAsync(Guid accountId, decimal amount);
 
         Task<bool> AccountBelongsToUserAsync(Guid accountId, Guid userId);
+
+        Task<bool> CreateBankAccountAsync(
+            Guid userId,
+            decimal initialBalance,
+            MySqlConnection connection,
+            MySqlTransaction transaction);
     }
 }

@@ -11,48 +11,47 @@ namespace ArithmeticCalculatorUserApi.Infrastructure.Repositories
 
         public RefreshTokenRepository()
         {
-            var connectionString = Environment.GetEnvironmentVariable("mysqlConnectionString");
-            _connectionString = connectionString!;
+            _connectionString = Environment.GetEnvironmentVariable("mysqlConnectionString")
+                                ?? throw new InvalidOperationException("Connection string is not set.");
         }
 
         public async Task<bool> AddAsync(RefreshToken refreshToken)
         {
+            const string query = @"
+                INSERT INTO refresh_tokens (token, user_id, expires_at, created_at, is_revoked)
+                VALUES (@Token, @UserId, @ExpiresAt, @CreatedAt, @IsRevoked)";
+
             try
             {
                 using var connection = new MySqlConnection(_connectionString);
                 await connection.OpenAsync();
-
-                const string query = @"
-                    INSERT INTO RefreshTokens (Token, UserId, ExpiresAt, CreatedAt, IsUsed, IsRevoked)
-                    VALUES (@Token, @UserId, @ExpiresAt, @CreatedAt, @IsUsed, @IsRevoked)";
 
                 using var cmd = new MySqlCommand(query, connection);
                 cmd.Parameters.AddWithValue("@Token", refreshToken.Token);
                 cmd.Parameters.AddWithValue("@UserId", refreshToken.UserId);
                 cmd.Parameters.AddWithValue("@ExpiresAt", refreshToken.ExpiresAt);
                 cmd.Parameters.AddWithValue("@CreatedAt", refreshToken.CreatedAt);
-                cmd.Parameters.AddWithValue("@IsUsed", refreshToken.IsUsed);
                 cmd.Parameters.AddWithValue("@IsRevoked", refreshToken.IsRevoked);
 
                 return await cmd.ExecuteNonQueryAsync() > 0;
             }
             catch (Exception ex)
             {
-                throw new DataException("Error during database operation.", ex);
+                throw new DataException("Error while adding a refresh token to the database.", ex);
             }
         }
 
         public async Task<RefreshToken?> GetByTokenAsync(string token)
         {
+            const string query = @"
+                SELECT token, user_id, expires_at, created_at, is_revoked 
+                FROM refresh_tokens
+                WHERE token = @Token AND is_revoked = 0";
+
             try
             {
                 using var connection = new MySqlConnection(_connectionString);
                 await connection.OpenAsync();
-
-                const string query = @"
-                    SELECT Token, UserId, ExpiresAt, CreatedAt, IsUsed, IsRevoked
-                    FROM RefreshTokens
-                    WHERE Token = @Token AND IsUsed = 0 AND IsRevoked = 0";
 
                 using var cmd = new MySqlCommand(query, connection);
                 cmd.Parameters.AddWithValue("@Token", token);
@@ -62,18 +61,17 @@ namespace ArithmeticCalculatorUserApi.Infrastructure.Repositories
                 {
                     return new RefreshToken
                     {
-                        Token = reader.GetString("Token"),
-                        UserId = reader.GetGuid("UserId"),
-                        ExpiresAt = reader.GetDateTime("ExpiresAt"),
-                        CreatedAt = reader.GetDateTime("CreatedAt"),
-                        IsUsed = reader.GetBoolean("IsUsed"),
-                        IsRevoked = reader.GetBoolean("IsRevoked")
+                        Token = reader.GetString("token"),
+                        UserId = reader.GetGuid("user_id"),
+                        ExpiresAt = reader.GetDateTime("expires_at"),
+                        CreatedAt = reader.GetDateTime("created_at"),
+                        IsRevoked = reader.GetBoolean("is_revoked")
                     };
                 }
             }
             catch (Exception ex)
             {
-                throw new DataException("Error during database operation.", ex);
+                throw new DataException("Error while retrieving a refresh token from the database.", ex);
             }
 
             return null;
@@ -81,16 +79,16 @@ namespace ArithmeticCalculatorUserApi.Infrastructure.Repositories
 
         public async Task InvalidateTokenAsync(string token)
         {
+            const string query = @"
+                UPDATE refresh_tokens
+                SET is_revoked = 1, 
+                    revoked_at = @RevokedAt
+                WHERE token = @Token";
+
             try
             {
                 using var connection = new MySqlConnection(_connectionString);
                 await connection.OpenAsync();
-
-                const string query = @"
-                    UPDATE RefreshTokens
-                    SET IsRevoked = 1, 
-                        RevokedAt = @RevokedAt
-                    WHERE Token = @Token";
 
                 using var cmd = new MySqlCommand(query, connection);
                 cmd.Parameters.AddWithValue("@RevokedAt", DateTime.UtcNow);
@@ -100,7 +98,7 @@ namespace ArithmeticCalculatorUserApi.Infrastructure.Repositories
             }
             catch (Exception ex)
             {
-                throw new DataException("Error during database operation.", ex);
+                throw new DataException("Error while invalidating a refresh token in the database.", ex);
             }
         }
     }

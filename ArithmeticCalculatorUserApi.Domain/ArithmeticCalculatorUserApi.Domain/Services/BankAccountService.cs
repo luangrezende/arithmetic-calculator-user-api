@@ -41,7 +41,6 @@ namespace ArithmeticCalculatorUserApi.Domain.Services
             {
                 Id = account.Id,
                 UserId = account.UserId,
-                AccountType = account.AccountType,
                 Balance = account.Balance,
                 CreatedAt = account.CreatedAt,
                 Currency = account.Currency,

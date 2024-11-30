@@ -1,10 +1,10 @@
 ﻿using System.Data;
-using ArithmeticCalculatorUserApi.Domain.Enums;
 using ArithmeticCalculatorUserApi.Domain.Models;
 using ArithmeticCalculatorUserApi.Domain.Repositories;
 using ArithmeticCalculatorUserApi.Infrastructure.Security;
 using ArithmeticCalculatorUserApi.Infrastructure.Extensions;
 using MySql.Data.MySqlClient;
+using ArithmeticCalculatorUserApi.Domain.Enums;
 
 namespace ArithmeticCalculatorUserApi.Infrastructure.Repositories
 {
@@ -12,16 +12,23 @@ namespace ArithmeticCalculatorUserApi.Infrastructure.Repositories
     {
         private readonly string _connectionString;
         private readonly decimal _promotionalAmount;
+        private readonly IBankAccountRepository _bankAccountRepository;
 
-        public UserRepository()
+        public UserRepository(IBankAccountRepository bankAccountRepository)
         {
-            _connectionString = Environment.GetEnvironmentVariable("mysqlConnectionString")!;
-            _promotionalAmount = decimal.Parse(Environment.GetEnvironmentVariable("promotionalAmount")!);
+            _bankAccountRepository = bankAccountRepository;
+            _connectionString = Environment.GetEnvironmentVariable("mysqlConnectionString") ?? throw new InvalidOperationException("Connection string is not set.");
+            _promotionalAmount = decimal.Parse(Environment.GetEnvironmentVariable("promotionalAmount") ?? throw new InvalidOperationException("Promotional amount is not set."));
         }
 
         public async Task<User?> AuthenticateAsync(string username, string password)
         {
-            const string query = "SELECT Id, Username, Password, Name, Status FROM User WHERE Username = @Username";
+            const string query = @"
+                SELECT u.id, u.username, u.password, u.name, us.description AS status 
+                FROM user u
+                INNER JOIN user_status us ON u.user_status_id = us.id
+                WHERE u.username = @Username";
+
             var user = await GetUserFromQueryAsync(query, new Dictionary<string, object>
             {
                 { "@Username", username }
@@ -35,67 +42,83 @@ namespace ArithmeticCalculatorUserApi.Infrastructure.Repositories
 
         public async Task<bool> UserExistsAsync(string username)
         {
-            const string query = "SELECT COUNT(1) FROM User WHERE Username = @Username";
+            const string query = "SELECT COUNT(1) FROM user WHERE username = @Username";
 
             using var connection = new MySqlConnection(_connectionString);
             await connection.OpenAsync();
 
-            return await ExecuteScalarAsync(query, new Dictionary<string, object>
+            var result = await ExecuteScalarAsync(query, new Dictionary<string, object>
             {
                 { "@Username", username }
-            }, connection) > 0;
+            });
+
+            return Convert.ToInt32(result) > 0;
+        }
+
+        public async Task<bool> UserIsActiveAsync(string username)
+        {
+            const string query = @"
+                SELECT us.description 
+                FROM user u
+                INNER JOIN user_status us ON u.user_status_id = us.id
+                WHERE u.username = @Username";
+
+            var status = await ExecuteScalarAsync(query, new Dictionary<string, object>
+            {
+                { "@Username", username }
+            });
+
+            return status?.ToString()!.Equals(UserStatus.Active.ToString(), StringComparison.OrdinalIgnoreCase) ?? false;
         }
 
         public async Task<bool> CreateUserAsync(string username, string password, string name)
         {
+            using var connection = new MySqlConnection(_connectionString);
+            await connection.OpenAsync();
+            using var transaction = await connection.BeginTransactionAsync();
+
             try
             {
-                using var connection = new MySqlConnection(_connectionString);
-                await connection.OpenAsync();
-
-                using var transaction = await connection.BeginTransactionAsync();
-
                 var userId = Guid.NewGuid();
                 var hashedPassword = PasswordHasher.HashPassword(password);
 
-                const string userQuery = "INSERT INTO User (Id, Username, Password, Name) VALUES (@Id, @Username, @Password, @Name)";
-                if (await ExecuteNonQueryAsync(userQuery, new Dictionary<string, object>
+                const string userQuery = @"
+                    INSERT INTO user (id, username, password, name, user_status_id) 
+                    VALUES (@Id, @Username, @Password, @Name, 1)";
+
+                var userInserted = await ExecuteNonQueryAsync(userQuery, new Dictionary<string, object>
                 {
                     { "@Id", userId },
                     { "@Username", username },
                     { "@Password", hashedPassword },
                     { "@Name", name }
-                }, connection, transaction) <= 0)
-                {
-                    await transaction.RollbackAsync();
-                    return false;
-                }
+                }, connection, transaction);
 
-                const string accountQuery = "INSERT INTO BankAccount (Id, User_Id, Account_Type, Balance) VALUES (@Id, @UserId, @AccountType, @Balance)";
-                if (await ExecuteNonQueryAsync(accountQuery, new Dictionary<string, object>
-                {
-                    { "@Id", Guid.NewGuid() },
-                    { "@UserId", userId },
-                    { "@AccountType", AccountType.Personal.ToString().ToLower() },
-                    { "@Balance", _promotionalAmount }
-                }, connection, transaction) <= 0)
-                {
-                    await transaction.RollbackAsync();
-                    return false;
-                }
+                if (userInserted <= 0)
+                    throw new Exception("Failed to insert user.");
+
+                var accountCreated = await _bankAccountRepository.CreateBankAccountAsync(userId, _promotionalAmount, connection, transaction);
+                if (!accountCreated)
+                    throw new Exception("Failed to create bank account.");
 
                 await transaction.CommitAsync();
                 return true;
             }
-            catch (Exception ex)
+            catch
             {
-                throw new DataException("Error during database operation.", ex);
+                await transaction.RollbackAsync();
+                throw;
             }
         }
 
         public async Task<User?> GetUserByIdAsync(Guid userId)
         {
-            const string query = "SELECT Id, Username, Name, Status FROM User WHERE Id = @UserId";
+            const string query = @"
+                SELECT u.id, u.username, u.name, us.description AS status 
+                FROM user u
+                INNER JOIN user_status us ON u.user_status_id = us.id
+                WHERE u.id = @UserId";
+
             return await GetUserFromQueryAsync(query, new Dictionary<string, object>
             {
                 { "@UserId", userId }
@@ -104,39 +127,32 @@ namespace ArithmeticCalculatorUserApi.Infrastructure.Repositories
 
         private async Task<User?> GetUserFromQueryAsync(string query, Dictionary<string, object> parameters)
         {
-            try
+            using var connection = new MySqlConnection(_connectionString);
+            await connection.OpenAsync();
+
+            using var cmd = new MySqlCommand(query, connection);
+            foreach (var param in parameters)
             {
-                using var connection = new MySqlConnection(_connectionString);
-                await connection.OpenAsync();
-
-                using var cmd = new MySqlCommand(query, connection);
-                foreach (var param in parameters)
-                {
-                    cmd.Parameters.AddWithValue(param.Key, param.Value);
-                }
-
-                using var reader = await cmd.ExecuteReaderAsync();
-                if (reader.Read())
-                {
-                    return new User
-                    {
-                        Id = reader.GetGuid("Id"),
-                        Username = reader.GetString("Username"),
-                        Name = reader.GetString("Name"),
-                        Status = reader.GetString("Status"),
-                        Password = reader.HasColumn("Password") ? reader["Password"] as string : null
-                    };
-                }
+                cmd.Parameters.AddWithValue(param.Key, param.Value);
             }
-            catch (Exception ex)
+
+            using var reader = await cmd.ExecuteReaderAsync();
+            if (reader.Read())
             {
-                throw new DataException("Error during database operation.", ex);
+                return new User
+                {
+                    Id = reader.GetGuid("id"),
+                    Username = reader.GetString("username"),
+                    Name = reader.GetString("name"),
+                    Status = reader.GetString("status"),
+                    Password = reader.HasColumn("password") ? reader["password"] as string : null
+                };
             }
 
             return null;
         }
 
-        private async Task<int> ExecuteNonQueryAsync(string query, Dictionary<string, object> parameters, MySqlConnection? connection = null, MySqlTransaction? transaction = null)
+        private async Task<int> ExecuteNonQueryAsync(string query, Dictionary<string, object> parameters, MySqlConnection connection, MySqlTransaction? transaction = null)
         {
             using var cmd = new MySqlCommand(query, connection, transaction);
             foreach (var param in parameters)
@@ -147,17 +163,10 @@ namespace ArithmeticCalculatorUserApi.Infrastructure.Repositories
             return await cmd.ExecuteNonQueryAsync();
         }
 
-        private async Task<int> ExecuteScalarAsync(string query, Dictionary<string, object> parameters, MySqlConnection? connection)
+        private async Task<object?> ExecuteScalarAsync(string query, Dictionary<string, object> parameters)
         {
-            if (connection == null)
-            {
-                throw new ArgumentNullException(nameof(connection), "A valid MySQL connection must be provided.");
-            }
-
-            if (connection.State != ConnectionState.Open)
-            {
-                await connection.OpenAsync();
-            }
+            using var connection = new MySqlConnection(_connectionString);
+            await connection.OpenAsync();
 
             using var cmd = new MySqlCommand(query, connection);
             foreach (var param in parameters)
@@ -165,8 +174,7 @@ namespace ArithmeticCalculatorUserApi.Infrastructure.Repositories
                 cmd.Parameters.AddWithValue(param.Key, param.Value);
             }
 
-            var result = await cmd.ExecuteScalarAsync();
-            return Convert.ToInt32(result);
+            return await cmd.ExecuteScalarAsync();
         }
     }
 }

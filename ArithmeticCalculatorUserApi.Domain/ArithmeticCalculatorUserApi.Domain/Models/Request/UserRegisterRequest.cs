@@ -26,5 +26,4 @@ namespace ArithmeticCalculatorUserApi.Domain.Models.Request
             return string.Equals(Password, ConfirmPassword);
         }
     }
-
 }

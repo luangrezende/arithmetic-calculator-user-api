@@ -8,6 +8,8 @@ namespace ArithmeticCalculatorUserApi.Domain.Repositories
 
         Task<bool> UserExistsAsync(string username);
 
+        Task<bool> UserIsActiveAsync(string username);
+
         Task<bool> CreateUserAsync(string username, string password, string name);
 
         Task<User?> GetUserByIdAsync(Guid userId);
