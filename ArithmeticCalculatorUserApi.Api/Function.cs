@@ -53,7 +53,7 @@ public class Function
 
             return request.HttpMethod switch
             {
-                "GET" when request.Path == "/v1/user/auth/profile" => await GetProfile(request),
+                "GET" when request.Path == "/v1/user/profile" => await GetProfile(request),
                 "POST" when request.Path == "/v1/user/auth/login" => await Login(request),
                 "POST" when request.Path == "/v1/user/auth/logout" => await Logout(request),
                 "POST" when request.Path == "/v1/user/auth/refresh" => await RefreshToken(request),
