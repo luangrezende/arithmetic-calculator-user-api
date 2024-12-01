@@ -59,20 +59,20 @@ public class Function
                 "POST" when request.Path == "/v1/user/auth/refresh" => await RefreshToken(request),
                 "POST" when request.Path == "/v1/user/auth/register" => await Register(request),
                 "POST" when request.Path == "/v1/user/account/balance" => await AddBalance(request),
-                "DELETE" when request.Path == "/v1/user/account/balance" => await DebitBalance(request),
-                _ => BuildResponse(HttpStatusCode.NotFound, new { error = "Endpoint not found." }),
+                "PUT" when request.Path == "/v1/user/account/balance" => await DebitBalance(request),
+                _ => BuildResponse(HttpStatusCode.NotFound, new { error = ApiResponseMessages.EndpointNotFound }),
             };
         }
         catch (HttpResponseException ex)
         {
             context.Logger.LogError($"HttpResponseException: {ex.Message}");
-            return BuildResponse(ex.StatusCode, new { error = ex.ResponseBody ?? "An error occurred." });
+            return BuildResponse(ex.StatusCode, new { error = ex.ResponseBody ?? ApiResponseMessages.GenericError });
         }
         catch (SecurityTokenExpiredException ex)
         {
             context.Logger.LogError($"SecurityTokenExpiredException: {ex.Message}");
             return BuildResponse(HttpStatusCode.Unauthorized, new { error = ApiResponseMessages.TokenExpired });
-        } 
+        }
         catch (SecurityTokenMalformedException ex)
         {
             context.Logger.LogError($"SecurityTokenMalformedException: {ex.Message}");
@@ -81,7 +81,7 @@ public class Function
         catch (Exception ex)
         {
             context.Logger.LogError($"Unhandled exception: {ex.Message}");
-            return BuildResponse(HttpStatusCode.InternalServerError, new { error = "Internal server error." });
+            return BuildResponse(HttpStatusCode.InternalServerError, new { error = ApiResponseMessages.InternalServerError });
         }
     }
 
@@ -110,7 +110,7 @@ public class Function
     {
         var jwtTokenValidator = _serviceProvider.GetRequiredService<JwtTokenValidator>();
         if (!request.Headers.TryGetValue("Authorization", out var authorization) || string.IsNullOrWhiteSpace(authorization))
-            throw new HttpResponseException(HttpStatusCode.Unauthorized, ApiResponseMessages.InvalidToken);
+            throw new HttpResponseException(HttpStatusCode.Unauthorized, ApiResponseMessages.TokenMissing);
 
         var token = authorization.Replace("Bearer ", "", StringComparison.OrdinalIgnoreCase);
         if (!jwtTokenValidator.ValidateToken(token, out var userId))
@@ -130,7 +130,7 @@ public class Function
         {
             BalanceOperation.Add => await bankAccountService.AddBalanceAsync(accountId, amount),
             BalanceOperation.Debit => await bankAccountService.DebitBalanceAsync(accountId, amount),
-            _ => throw new HttpResponseException(HttpStatusCode.BadRequest, "Invalid operation")
+            _ => throw new HttpResponseException(HttpStatusCode.BadRequest, ApiResponseMessages.InvalidOperation)
         };
 
         if (!success)
