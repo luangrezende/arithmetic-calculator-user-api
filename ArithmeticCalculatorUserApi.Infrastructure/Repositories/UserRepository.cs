@@ -19,40 +19,6 @@ namespace ArithmeticCalculatorUserApi.Infrastructure.Repositories
             _promotionalAmount = decimal.Parse(Environment.GetEnvironmentVariable("promotionalAmount") ?? throw new InvalidOperationException("Promotional amount is not set."));
         }
 
-        public async Task<UserEntity?> AuthenticateAsync(string username, string password)
-        {
-            const string query = @"
-                SELECT u.id, u.username, u.password, u.name, us.description AS status 
-                FROM user u
-                INNER JOIN user_status us ON u.user_status_id = us.id
-                WHERE u.username = @Username";
-
-            var user = await GetUserFromQueryAsync(query, new Dictionary<string, object>
-            {
-                { "@Username", username }
-            });
-
-            if (user == null || !PasswordHasher.VerifyPassword(password, user.Password!))
-                return null;
-
-            return user;
-        }
-
-        public async Task<bool> UserExistsAsync(string username)
-        {
-            const string query = "SELECT COUNT(1) FROM user WHERE username = @Username";
-
-            using var connection = new MySqlConnection(_connectionString);
-            await connection.OpenAsync();
-
-            var result = await ExecuteScalarAsync(query, new Dictionary<string, object>
-            {
-                { "@Username", username }
-            });
-
-            return Convert.ToInt32(result) > 0;
-        }
-
         public async Task<bool> CreateUserAsync(string username, string password, string name)
         {
             using var connection = new MySqlConnection(_connectionString);
@@ -157,20 +123,6 @@ namespace ArithmeticCalculatorUserApi.Infrastructure.Repositories
             }
 
             return await cmd.ExecuteNonQueryAsync();
-        }
-
-        private async Task<object?> ExecuteScalarAsync(string query, Dictionary<string, object> parameters)
-        {
-            using var connection = new MySqlConnection(_connectionString);
-            await connection.OpenAsync();
-
-            using var cmd = new MySqlCommand(query, connection);
-            foreach (var param in parameters)
-            {
-                cmd.Parameters.AddWithValue(param.Key, param.Value);
-            }
-
-            return await cmd.ExecuteScalarAsync();
         }
     }
 }
