@@ -53,6 +53,8 @@ public class Function
 
             return request.HttpMethod switch
             {
+                "GET" when request.Path == "/v1/user/test" => await Test(request),
+
                 "GET" when request.Path == "/v1/user/profile" => await GetProfile(request),
                 "POST" when request.Path == "/v1/user/auth/login" => await Login(request),
                 "POST" when request.Path == "/v1/user/auth/logout" => await Logout(request),
@@ -83,6 +85,12 @@ public class Function
             context.Logger.LogError($"Unhandled exception: {ex.Message}");
             return BuildResponse(HttpStatusCode.InternalServerError, new { error = ApiResponseMessages.InternalServerError });
         }
+    }
+
+    //remove after tersts
+    private async Task<APIGatewayProxyResponse> Test(APIGatewayProxyRequest request)
+    {
+        return BuildResponse(HttpStatusCode.OK, new { message = "test ok" });
     }
 
     private T ParseRequestOrThrow<T>(string requestBody)
