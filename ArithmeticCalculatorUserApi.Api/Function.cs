@@ -88,10 +88,25 @@ public class Function
         }
     }
 
-    //remove after tersts
-    private async Task<APIGatewayProxyResponse> Test(APIGatewayProxyRequest request)
+    public async Task<APIGatewayProxyResponse> Test(APIGatewayProxyRequest request)
     {
-        return BuildResponse(HttpStatusCode.OK, new { message = "test ok" });
+        try
+        {
+            HttpClient httpClient = new HttpClient();
+            var url = "https://www.random.org/strings/?num=1&len=10&digits=on&upperalpha=on&loweralpha=on&unique=on&format=plain&rnd=new";
+
+            var response = await httpClient.GetAsync(url);
+
+            response.EnsureSuccessStatusCode();
+
+            var randomString = await response.Content.ReadAsStringAsync();
+
+            return BuildResponse(HttpStatusCode.OK, new { randomString = randomString.Trim() });
+        }
+        catch (Exception ex)
+        {
+            return BuildResponse(HttpStatusCode.InternalServerError, new { error = ex.Message });
+        }
     }
 
     private T ParseRequestOrThrow<T>(string requestBody)
