@@ -65,21 +65,25 @@ public class Function
         }
         catch (HttpResponseException ex)
         {
+            Console.WriteLine(ex.Message);
             context.Logger.LogError($"HttpResponseException: {ex.Message}");
             return BuildResponse(ex.StatusCode, new { error = ex.ResponseBody ?? ApiResponseMessages.GenericError });
         }
         catch (SecurityTokenExpiredException ex)
         {
+            Console.WriteLine(ex.Message);
             context.Logger.LogError($"SecurityTokenExpiredException: {ex.Message}");
             return BuildResponse(HttpStatusCode.Unauthorized, new { error = ApiResponseMessages.TokenExpired });
         }
         catch (SecurityTokenMalformedException ex)
         {
+            Console.WriteLine(ex.Message);
             context.Logger.LogError($"SecurityTokenMalformedException: {ex.Message}");
             return BuildResponse(HttpStatusCode.BadRequest, new { error = ApiResponseMessages.InvalidToken });
         }
         catch (Exception ex)
         {
+            Console.WriteLine(ex.Message);
             context.Logger.LogError($"Unhandled exception: {ex.Message}");
             return BuildResponse(HttpStatusCode.InternalServerError, new { error = ApiResponseMessages.InternalServerError });
         }
@@ -164,6 +168,8 @@ public class Function
     {
         var userId = ValidateTokenOrThrow(request);
         var debitBalanceRequest = ParseRequestOrThrow<UpdateBalanceRequest>(request.Body);
+
+        Console.WriteLine(debitBalanceRequest);
 
         await UpdateBalanceAsync(userId, debitBalanceRequest.AccountId, debitBalanceRequest.Amount, BalanceOperation.Debit);
 
