@@ -92,10 +92,13 @@ public class Function
     {
         try
         {
-            HttpClient httpClient = new HttpClient();
+            Console.WriteLine("STARTING RANDOM STRING");
+            HttpClient httpClient = new();
             var url = "https://www.random.org/strings/?num=1&len=10&digits=on&upperalpha=on&loweralpha=on&unique=on&format=plain&rnd=new";
 
+            Console.WriteLine(url);
             var response = await httpClient.GetAsync(url);
+            Console.WriteLine(response);
 
             response.EnsureSuccessStatusCode();
 
@@ -105,6 +108,7 @@ public class Function
         }
         catch (Exception ex)
         {
+            Console.WriteLine(ex.Message);
             return BuildResponse(HttpStatusCode.InternalServerError, new { error = ex.Message });
         }
     }
