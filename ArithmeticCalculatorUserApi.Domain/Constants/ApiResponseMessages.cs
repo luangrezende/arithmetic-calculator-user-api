@@ -15,7 +15,7 @@
         public const string UsernameAlreadyExists = "This email is already registered.";
         public const string ErrorCreatingUser = "An error occurred while creating the user.";
         public const string UserCreatedSuccessfully = "The user was created successfully.";
-        public const string UserInactive = "The user account is inactive.";
+        public const string UserInactive = "The user account is inactive. Please contact your administrator for assistance.";
         public const string AccountIdAmountRequired = "Account ID and a valid amount are required.";
         public const string AddBalanceFailed = "An error occurred while adding balance to the account.";
         public const string AddBalanceSuccess = "The balance was added successfully.";
