@@ -2,7 +2,7 @@
 {
     public enum TokenConfiguration
     {
-        AccessTokenExpirationTimeInSeconds = 9000, //900
+        AccessTokenExpirationTimeInSeconds = 900,
         RefreshTokenExpirationTimeInHours = 2
     }
 }

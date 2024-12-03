@@ -9,14 +9,14 @@ namespace ArithmeticCalculatorUserApi.Infrastructure.Repositories
     public class UserRepository : IUserRepository
     {
         private readonly string _connectionString;
-        private readonly decimal _promotionalAmount;
+        private readonly decimal _PROMOTIONAL_AMOUNT;
         private readonly IBankAccountRepository _bankAccountRepository;
 
         public UserRepository(IBankAccountRepository bankAccountRepository)
         {
             _bankAccountRepository = bankAccountRepository;
-            _connectionString = Environment.GetEnvironmentVariable("mysqlConnectionString") ?? throw new InvalidOperationException("Connection string is not set.");
-            _promotionalAmount = decimal.Parse(Environment.GetEnvironmentVariable("promotionalAmount") ?? throw new InvalidOperationException("Promotional amount is not set."));
+            _connectionString = Environment.GetEnvironmentVariable("MYSQL_CONNECTION_STRING") ?? throw new InvalidOperationException("Connection string is not set.");
+            _PROMOTIONAL_AMOUNT = decimal.Parse(Environment.GetEnvironmentVariable("PROMOTIONAL_AMOUNT") ?? throw new InvalidOperationException("Promotional amount is not set."));
         }
 
         public async Task<bool> CreateUserAsync(string username, string password, string name)
@@ -45,7 +45,7 @@ namespace ArithmeticCalculatorUserApi.Infrastructure.Repositories
                 if (userInserted <= 0)
                     throw new Exception("Failed to insert user.");
 
-                var accountCreated = await _bankAccountRepository.CreateBankAccountAsync(userId, _promotionalAmount, connection, transaction);
+                var accountCreated = await _bankAccountRepository.CreateBankAccountAsync(userId, _PROMOTIONAL_AMOUNT, connection, transaction);
                 if (!accountCreated)
                     throw new Exception("Failed to create bank account.");
 
