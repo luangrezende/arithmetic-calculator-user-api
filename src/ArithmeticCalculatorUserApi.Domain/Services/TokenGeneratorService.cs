@@ -14,7 +14,7 @@ namespace ArithmeticCalculatorUserApi.Infrastructure.Security
 
         public TokenGeneratorService()
         {
-            _jwtSecret = Environment.GetEnvironmentVariable("jwtSecretKey")!;
+            _jwtSecret = Environment.GetEnvironmentVariable("JWT_SECRET_KEY")!;
         }
 
         public string GenerateToken(UserDTO user)

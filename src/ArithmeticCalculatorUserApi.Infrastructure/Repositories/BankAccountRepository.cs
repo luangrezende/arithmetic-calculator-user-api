@@ -10,7 +10,7 @@ namespace ArithmeticCalculatorUserApi.Infrastructure.Repositories
 
         public BankAccountRepository()
         {
-            _connectionString = Environment.GetEnvironmentVariable("mysqlConnectionString")
+            _connectionString = Environment.GetEnvironmentVariable("MYSQL_CONNECTION_STRING")
                                 ?? throw new InvalidOperationException("Connection string is not set.");
         }
 
