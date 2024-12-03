@@ -53,8 +53,6 @@ public class Function
 
             return request.HttpMethod switch
             {
-                "GET" when request.Path == "/v1/user/test" => await Test(request),
-
                 "GET" when request.Path == "/v1/user/profile" => await GetProfile(request),
                 "POST" when request.Path == "/v1/user/auth/login" => await Login(request),
                 "POST" when request.Path == "/v1/user/auth/logout" => await Logout(request),
@@ -83,33 +81,7 @@ public class Function
         catch (Exception ex)
         {
             context.Logger.LogError($"Exception: {ex.Message}");
-            //return BuildResponse(HttpStatusCode.InternalServerError, new { error = ApiResponseMessages.InternalServerError });
-            return BuildResponse(HttpStatusCode.InternalServerError, new { error = ex.Message });
-        }
-    }
-
-    public async Task<APIGatewayProxyResponse> Test(APIGatewayProxyRequest request)
-    {
-        try
-        {
-            Console.WriteLine("STARTING RANDOM STRING");
-            HttpClient httpClient = new();
-            var url = "https://www.random.org/strings/?num=1&len=10&digits=on&upperalpha=on&loweralpha=on&unique=on&format=plain&rnd=new";
-
-            Console.WriteLine(url);
-            var response = await httpClient.GetAsync(url);
-            Console.WriteLine(response);
-
-            response.EnsureSuccessStatusCode();
-
-            var randomString = await response.Content.ReadAsStringAsync();
-
-            return BuildResponse(HttpStatusCode.OK, new { randomString = randomString.Trim() });
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine(ex.Message);
-            return BuildResponse(HttpStatusCode.InternalServerError, new { error = ex.Message });
+            return BuildResponse(HttpStatusCode.InternalServerError, new { error = ApiResponseMessages.InternalServerError });
         }
     }
 
@@ -225,7 +197,7 @@ public class Function
         {
             Token = newAccessToken,
             RefreshToken = token,
-            Expiration = (int)TokenConfiguration.AccessTokenExpirationTimeInSeconds
+            Expiration = DateTime.UtcNow.AddSeconds((int)TokenConfiguration.AccessTokenExpirationTimeInSeconds)
         });
     }
 
@@ -237,22 +209,20 @@ public class Function
 
         var loginRequest = ParseRequestOrThrow<TokenRequest>(request.Body);
 
-        var user = await userService.GetUserByUsernameAsync(loginRequest.Username);
-
-        if (!user!.IsActive())
-            throw new HttpResponseException(HttpStatusCode.Conflict, ApiResponseMessages.UserInactive);
-
-        var result = await userService.AuthenticateAsync(user.Username, loginRequest.Password) 
+        var user = await userService.AuthenticateAsync(loginRequest.Username, loginRequest.Password)
             ?? throw new HttpResponseException(HttpStatusCode.Unauthorized, ApiResponseMessages.InvalidCredentials);
 
-        var accessToken = jwtTokenGenerator.GenerateToken(result);
-        var token = await refreshTokenService.AddAsync(result.Id);
+        if (!user.IsActive())
+            throw new HttpResponseException(HttpStatusCode.Conflict, ApiResponseMessages.UserInactive);
+
+        var accessToken = jwtTokenGenerator.GenerateToken(user);
+        var refreshToken = await refreshTokenService.AddAsync(user.Id);
 
         return BuildResponse(HttpStatusCode.OK, new TokenResponse
         {
             Token = accessToken,
-            RefreshToken = token,
-            Expiration = (int)TokenConfiguration.AccessTokenExpirationTimeInSeconds
+            RefreshToken = refreshToken,
+            Expiration = DateTime.UtcNow.AddSeconds((int)TokenConfiguration.AccessTokenExpirationTimeInSeconds)
         });
     }
 

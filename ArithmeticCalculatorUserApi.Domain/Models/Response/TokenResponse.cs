@@ -11,6 +11,6 @@ namespace ArithmeticCalculatorUserApi.Domain.Models.Response
         public string RefreshToken { get; set; }
 
         [JsonPropertyName("expiration")]
-        public int Expiration { get; set; }
+        public DateTime Expiration { get; set; }
     }
 }
