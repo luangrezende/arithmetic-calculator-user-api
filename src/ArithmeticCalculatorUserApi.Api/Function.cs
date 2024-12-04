@@ -93,7 +93,8 @@ public class Function
         catch (Exception ex)
         {
             context.Logger.LogError($"Exception: {ex.Message}");
-            return BuildResponse(HttpStatusCode.InternalServerError, new { error = ApiErrorMessages.InternalServerError });
+            //return BuildResponse(HttpStatusCode.InternalServerError, new { error = ApiErrorMessages.InternalServerError });
+            return BuildResponse(HttpStatusCode.InternalServerError, new { error = ex.Message });
         }
     }
 
