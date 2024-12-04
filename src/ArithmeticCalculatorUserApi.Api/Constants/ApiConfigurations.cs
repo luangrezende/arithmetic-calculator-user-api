@@ -1,4 +1,4 @@
-﻿namespace ArithmeticCalculatorUserApi.Domain.Constants
+﻿namespace ArithmeticCalculatorUserApi.Constants
 {
     public class ApiConfigurations
     {

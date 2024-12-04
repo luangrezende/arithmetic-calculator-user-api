@@ -1,6 +1,6 @@
 ﻿using ArithmeticCalculatorUserApi.Domain.Models.DTO;
 
-namespace ArithmeticCalculatorUserApi.Domain.Services.Interfaces
+namespace ArithmeticCalculatorUserApi.Domain.Interfaces
 {
     public interface IBankAccountService
     {

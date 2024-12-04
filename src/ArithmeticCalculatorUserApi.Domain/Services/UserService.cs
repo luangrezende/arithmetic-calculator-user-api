@@ -1,6 +1,6 @@
-﻿using ArithmeticCalculatorUserApi.Domain.Models.DTO;
-using ArithmeticCalculatorUserApi.Domain.Services.Interfaces;
-using ArithmeticCalculatorUserApi.Infrastructure.Repositories;
+﻿using ArithmeticCalculatorUserApi.Domain.Interfaces;
+using ArithmeticCalculatorUserApi.Domain.Models.DTO;
+using ArithmeticCalculatorUserApi.Infrastructure.Interfaces.Repositories;
 using ArithmeticCalculatorUserApi.Infrastructure.Security;
 
 namespace ArithmeticCalculatorUserApi.Domain.Services

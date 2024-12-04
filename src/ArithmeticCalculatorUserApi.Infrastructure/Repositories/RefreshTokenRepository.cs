@@ -1,4 +1,6 @@
-﻿using ArithmeticCalculatorUserApi.Infrastructure.Models;
+﻿using ArithmeticCalculatorUserApi.Infrastructure.Constants;
+using ArithmeticCalculatorUserApi.Infrastructure.Interfaces.Repositories;
+using ArithmeticCalculatorUserApi.Infrastructure.Models;
 using MySql.Data.MySqlClient;
 using System.Data;
 
@@ -11,10 +13,10 @@ namespace ArithmeticCalculatorUserApi.Infrastructure.Repositories
         public RefreshTokenRepository()
         {
             _connectionString = Environment.GetEnvironmentVariable("MYSQL_CONNECTION_STRING")
-                                ?? throw new InvalidOperationException("Connection string is not set.");
+                                ?? throw new InvalidOperationException("InfrastructureErrorMessages.ConnectionStringNotSet");
         }
 
-        public async Task<bool> AddAsync(RefreshTokenEntity refreshToken)
+        public async Task<RefreshTokenEntity> AddAsync(RefreshTokenEntity refreshToken)
         {
             const string query = @"
                 INSERT INTO refresh_tokens (token, user_id, expires_at, created_at, is_revoked)
@@ -30,7 +32,12 @@ namespace ArithmeticCalculatorUserApi.Infrastructure.Repositories
             cmd.Parameters.AddWithValue("@CreatedAt", refreshToken.CreatedAt);
             cmd.Parameters.AddWithValue("@IsRevoked", refreshToken.IsRevoked);
 
-            return await cmd.ExecuteNonQueryAsync() > 0;
+            var rowsAffected = await cmd.ExecuteNonQueryAsync();
+
+            if (rowsAffected > 0)
+                return refreshToken;
+
+            throw new InvalidOperationException(InfrastructureErrorMessages.FailedInsertRefreshToken);
         }
 
         public async Task<RefreshTokenEntity?> GetByTokenAsync(string token)

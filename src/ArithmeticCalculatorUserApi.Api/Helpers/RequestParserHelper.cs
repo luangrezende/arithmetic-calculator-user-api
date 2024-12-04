@@ -1,5 +1,5 @@
 ﻿using System.Text.Json;
-using ArithmeticCalculatorUserApi.Domain.Constants;
+using ArithmeticCalculatorUserApi.Constants;
 
 namespace ArithmeticCalculatorUserApi.Helpers
 {
@@ -10,7 +10,7 @@ namespace ArithmeticCalculatorUserApi.Helpers
             if (string.IsNullOrWhiteSpace(requestBody))
             {
                 parsedObject = default;
-                errorMessage = ApiResponseMessages.MissingBody;
+                errorMessage = ApiErrorMessages.MissingBody;
                 return false;
             }
 
@@ -20,7 +20,7 @@ namespace ArithmeticCalculatorUserApi.Helpers
 
                 if (parsedObject == null)
                 {
-                    errorMessage = ApiResponseMessages.InvalidRequestBody;
+                    errorMessage = ApiErrorMessages.InvalidRequestBody;
                     return false;
                 }
 
@@ -30,7 +30,7 @@ namespace ArithmeticCalculatorUserApi.Helpers
             catch (JsonException)
             {
                 parsedObject = default;
-                errorMessage = ApiResponseMessages.InvalidJsonFormat;
+                errorMessage = ApiErrorMessages.InvalidJsonFormat;
                 return false;
             }
         }

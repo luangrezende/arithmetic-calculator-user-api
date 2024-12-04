@@ -1,4 +1,6 @@
-﻿using ArithmeticCalculatorUserApi.Infrastructure.Models;
+﻿using ArithmeticCalculatorUserApi.Infrastructure.Interfaces.Repositories;
+using ArithmeticCalculatorUserApi.Infrastructure.Interfaces.Services;
+using ArithmeticCalculatorUserApi.Infrastructure.Models;
 using MySql.Data.MySqlClient;
 using System.Data;
 
@@ -6,12 +8,11 @@ namespace ArithmeticCalculatorUserApi.Infrastructure.Repositories
 {
     public class BankAccountRepository : IBankAccountRepository
     {
-        private readonly string _connectionString;
+        private readonly IDbConnectionService _dbConnectionService;
 
-        public BankAccountRepository()
+        public BankAccountRepository(IDbConnectionService dbConnectionService)
         {
-            _connectionString = Environment.GetEnvironmentVariable("MYSQL_CONNECTION_STRING")
-                                ?? throw new InvalidOperationException("Connection string is not set.");
+            _dbConnectionService = dbConnectionService;
         }
 
         public async Task<bool> AccountBelongsToUserAsync(Guid accountId, Guid userId)
@@ -21,14 +22,14 @@ namespace ArithmeticCalculatorUserApi.Infrastructure.Repositories
                 FROM bank_account
                 WHERE id = @AccountId AND user_id = @UserId";
 
-            using var connection = new MySqlConnection(_connectionString);
-            await connection.OpenAsync();
-
-            return Convert.ToInt32(await ExecuteScalarAsync(query, new Dictionary<string, object>
+            using var connection = await _dbConnectionService.CreateConnectionAsync();
+            var result = await _dbConnectionService.ExecuteScalarAsync(query, new Dictionary<string, object>
             {
                 { "@AccountId", accountId },
                 { "@UserId", userId }
-            }, connection)) > 0;
+            }, connection);
+
+            return Convert.ToInt32(result ?? 0) > 0;
         }
 
         public async Task<bool> AddBalanceAsync(Guid accountId, decimal amount)
@@ -39,14 +40,14 @@ namespace ArithmeticCalculatorUserApi.Infrastructure.Repositories
                     updated_at = CURRENT_TIMESTAMP
                 WHERE id = @AccountId";
 
-            using var connection = new MySqlConnection(_connectionString);
-            await connection.OpenAsync();
-
-            return await ExecuteNonQueryAsync(query, new Dictionary<string, object>
+            using var connection = await _dbConnectionService.CreateConnectionAsync();
+            var result = await _dbConnectionService.ExecuteNonQueryAsync(query, new Dictionary<string, object>
             {
                 { "@Amount", amount },
                 { "@AccountId", accountId }
-            }, connection) > 0;
+            }, connection);
+
+            return result > 0;
         }
 
         public async Task<bool> DebitBalanceAsync(Guid accountId, decimal amount)
@@ -62,10 +63,9 @@ namespace ArithmeticCalculatorUserApi.Infrastructure.Repositories
                     updated_at = CURRENT_TIMESTAMP
                 WHERE id = @AccountId";
 
-            using var connection = new MySqlConnection(_connectionString);
-            await connection.OpenAsync();
+            using var connection = await _dbConnectionService.CreateConnectionAsync();
 
-            var balanceObj = await ExecuteScalarAsync(checkBalanceQuery, new Dictionary<string, object>
+            var balanceObj = await _dbConnectionService.ExecuteScalarAsync(checkBalanceQuery, new Dictionary<string, object>
             {
                 { "@AccountId", accountId }
             }, connection);
@@ -75,11 +75,13 @@ namespace ArithmeticCalculatorUserApi.Infrastructure.Repositories
                 return false;
             }
 
-            return await ExecuteNonQueryAsync(debitQuery, new Dictionary<string, object>
+            var result = await _dbConnectionService.ExecuteNonQueryAsync(debitQuery, new Dictionary<string, object>
             {
                 { "@Amount", amount },
                 { "@AccountId", accountId }
-            }, connection) > 0;
+            }, connection);
+
+            return result > 0;
         }
 
         public async Task<IEnumerable<BankAccountEntity>> GetBankAccountsByUserIdAsync(Guid userId)
@@ -92,9 +94,7 @@ namespace ArithmeticCalculatorUserApi.Infrastructure.Repositories
                 FROM bank_account 
                 WHERE user_id = @UserId";
 
-            using var connection = new MySqlConnection(_connectionString);
-            await connection.OpenAsync();
-
+            using var connection = await _dbConnectionService.CreateConnectionAsync();
             using var cmd = new MySqlCommand(query, connection);
             cmd.Parameters.AddWithValue("@UserId", userId);
 
@@ -114,11 +114,7 @@ namespace ArithmeticCalculatorUserApi.Infrastructure.Repositories
             return accounts;
         }
 
-        public async Task<bool> CreateBankAccountAsync(
-            Guid userId,
-            decimal initialBalance,
-            MySqlConnection connection,
-            MySqlTransaction transaction)
+        public async Task<bool> CreateBankAccountAsync(Guid userId, decimal initialBalance, MySqlConnection connection, MySqlTransaction transaction)
         {
             const string query = @"
                 INSERT INTO bank_account (id, user_id, balance) 
@@ -131,36 +127,9 @@ namespace ArithmeticCalculatorUserApi.Infrastructure.Repositories
                 { "@Balance", initialBalance }
             };
 
-            return await ExecuteNonQueryAsync(query, parameters, connection, transaction) > 0;
-        }
+            var result = await _dbConnectionService.ExecuteNonQueryAsync(query, parameters, connection, transaction);
 
-        private async Task<int> ExecuteNonQueryAsync(
-            string query,
-            Dictionary<string, object> parameters,
-            MySqlConnection connection,
-            MySqlTransaction? transaction = null)
-        {
-            using var cmd = new MySqlCommand(query, connection, transaction);
-            foreach (var param in parameters)
-            {
-                cmd.Parameters.AddWithValue(param.Key, param.Value);
-            }
-
-            return await cmd.ExecuteNonQueryAsync();
-        }
-
-        private async Task<object?> ExecuteScalarAsync(
-            string query,
-            Dictionary<string, object> parameters,
-            MySqlConnection connection)
-        {
-            using var cmd = new MySqlCommand(query, connection);
-            foreach (var param in parameters)
-            {
-                cmd.Parameters.AddWithValue(param.Key, param.Value);
-            }
-
-            return await cmd.ExecuteScalarAsync();
+            return result > 0;
         }
     }
 }

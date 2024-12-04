@@ -1,6 +1,6 @@
-﻿namespace ArithmeticCalculatorUserApi.Domain.Constants
+﻿namespace ArithmeticCalculatorUserApi.Constants
 {
-    public static class ApiResponseMessages
+    public static class ApiErrorMessages
     {
         public const string MissingBody = "The request body cannot be null or empty.";
         public const string InvalidCredentials = "The provided username or password is invalid.";
@@ -23,7 +23,7 @@
         public const string TokenExpired = "Token expired.";
         public const string TokenMissing = "Token is missing.";
         public const string UserNotFound = "User not found.";
-        public const string UserPasswordMatchError = "Password and ConfirmPassword must match.";
+        public const string UserPasswordMatchError = "password and confirmPassword must match.";
         public const string InsufficientBalance = "Insufficient balance to complete the transaction.";
         public const string DebitBalanceSuccess = "Balance debited successfully.";
         public const string AccountNotBelongToUser = "The specified account does not belong to the authenticated user.";
@@ -33,5 +33,7 @@
         public const string InvalidAmount = "The amount must be greater than zero.";
         public const string ExceededMaximumAmount = "The maximum amount you can add is $500.";
         public const string LogoutSuccessful = "Logout successful.";
+        public const string FailedToAddRefreshToken = "Failed to add refresh token.";
+        public const string ConnectionStringNotSet = "Connection string is not set.";
     }
 }

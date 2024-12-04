@@ -1,9 +1,9 @@
 ﻿using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
-using ArithmeticCalculatorUserApi.Domain.Enums;
-using ArithmeticCalculatorUserApi.Domain.Models.DTO;
-using ArithmeticCalculatorUserApi.Domain.Services.Interfaces;
+using ArithmeticCalculatorUserApi.Infrastructure.Enums;
+using ArithmeticCalculatorUserApi.Infrastructure.Interfaces.Services;
+using ArithmeticCalculatorUserApi.Infrastructure.Models;
 using Microsoft.IdentityModel.Tokens;
 
 namespace ArithmeticCalculatorUserApi.Infrastructure.Security
@@ -17,7 +17,7 @@ namespace ArithmeticCalculatorUserApi.Infrastructure.Security
             _jwtSecret = Environment.GetEnvironmentVariable("JWT_SECRET_KEY")!;
         }
 
-        public string GenerateToken(UserDTO user)
+        public string GenerateToken(UserEntity user)
         {
             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtSecret));
             var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);

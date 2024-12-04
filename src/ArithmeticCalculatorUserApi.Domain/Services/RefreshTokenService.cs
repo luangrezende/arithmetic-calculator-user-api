@@ -1,8 +1,8 @@
-﻿using ArithmeticCalculatorUserApi.Domain.Enums;
+﻿using ArithmeticCalculatorUserApi.Domain.Interfaces;
 using ArithmeticCalculatorUserApi.Domain.Models.DTO;
-using ArithmeticCalculatorUserApi.Domain.Services.Interfaces;
+using ArithmeticCalculatorUserApi.Infrastructure.Enums;
+using ArithmeticCalculatorUserApi.Infrastructure.Interfaces.Repositories;
 using ArithmeticCalculatorUserApi.Infrastructure.Models;
-using ArithmeticCalculatorUserApi.Infrastructure.Repositories;
 
 namespace ArithmeticCalculatorUserApi.Domain.Services
 {
@@ -23,9 +23,9 @@ namespace ArithmeticCalculatorUserApi.Domain.Services
                 UserId = userId
             };
 
-            await _refreshTokenRepository.AddAsync(newRefreshToken);
+            var refreshTokenAdded = await _refreshTokenRepository.AddAsync(newRefreshToken);
 
-            return newRefreshToken.Token;
+            return refreshTokenAdded.Token.ToString();
         }
 
         public async Task<RefreshTokenDTO?> GetByTokenAsync(string token)

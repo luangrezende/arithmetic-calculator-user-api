@@ -3,13 +3,18 @@ using System.Net;
 using System.Text.Json;
 using Amazon.Lambda.APIGatewayEvents;
 using Amazon.Lambda.Core;
-using ArithmeticCalculatorUserApi.Domain.Constants;
+using ArithmeticCalculatorUserApi.Constants;
 using ArithmeticCalculatorUserApi.Domain.Enums;
+using ArithmeticCalculatorUserApi.Domain.Interfaces;
 using ArithmeticCalculatorUserApi.Domain.Models.Request;
 using ArithmeticCalculatorUserApi.Domain.Models.Response;
 using ArithmeticCalculatorUserApi.Domain.Services;
-using ArithmeticCalculatorUserApi.Domain.Services.Interfaces;
 using ArithmeticCalculatorUserApi.Helpers;
+using ArithmeticCalculatorUserApi.Infrastructure.Data;
+using ArithmeticCalculatorUserApi.Infrastructure.Enums;
+using ArithmeticCalculatorUserApi.Infrastructure.Interfaces.Repositories;
+using ArithmeticCalculatorUserApi.Infrastructure.Interfaces.Services;
+using ArithmeticCalculatorUserApi.Infrastructure.Models;
 using ArithmeticCalculatorUserApi.Infrastructure.Repositories;
 using ArithmeticCalculatorUserApi.Infrastructure.Security;
 using Microsoft.Extensions.DependencyInjection;
@@ -41,6 +46,13 @@ public class Function
         services.AddScoped<IBankAccountRepository, BankAccountRepository>();
         services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
 
+        services.AddScoped<IDbConnectionService>(provider =>
+        {
+            var connectionString = Environment.GetEnvironmentVariable("MYSQL_CONNECTION_STRING")
+                                ?? throw new InvalidOperationException(ApiErrorMessages.ConnectionStringNotSet);
+            return new MySqlConnectionService(connectionString);
+        });
+
         services.AddScoped(sp => new JwtTokenValidator(Environment.GetEnvironmentVariable("JWT_SECRET_KEY")!));
     }
 
@@ -60,28 +72,28 @@ public class Function
                 "POST" when request.Path == "/v1/user/auth/register" => await Register(request),
                 "POST" when request.Path == "/v1/user/account/balance" => await AddBalance(request),
                 "PUT" when request.Path == "/v1/user/account/balance" => await DebitBalance(request),
-                _ => BuildResponse(HttpStatusCode.NotFound, new { error = ApiResponseMessages.EndpointNotFound }),
+                _ => BuildResponse(HttpStatusCode.NotFound, new { error = ApiErrorMessages.EndpointNotFound }),
             };
         }
         catch (HttpResponseException ex)
         {
             context.Logger.LogError($"HttpResponseException: {ex.Message}");
-            return BuildResponse(ex.StatusCode, new { error = ex.ResponseBody ?? ApiResponseMessages.GenericError });
+            return BuildResponse(ex.StatusCode, new { error = ex.ResponseBody ?? ApiErrorMessages.GenericError });
         }
         catch (SecurityTokenExpiredException ex)
         {
             context.Logger.LogError($"SecurityTokenExpiredException: {ex.Message}");
-            return BuildResponse(HttpStatusCode.Unauthorized, new { error = ApiResponseMessages.TokenExpired });
+            return BuildResponse(HttpStatusCode.Unauthorized, new { error = ApiErrorMessages.TokenExpired });
         }
         catch (SecurityTokenMalformedException ex)
         {
             context.Logger.LogError($"SecurityTokenMalformedException: {ex.Message}");
-            return BuildResponse(HttpStatusCode.BadRequest, new { error = ApiResponseMessages.InvalidToken });
+            return BuildResponse(HttpStatusCode.BadRequest, new { error = ApiErrorMessages.InvalidToken });
         }
         catch (Exception ex)
         {
             context.Logger.LogError($"Exception: {ex.Message}");
-            return BuildResponse(HttpStatusCode.InternalServerError, new { error = ApiResponseMessages.InternalServerError });
+            return BuildResponse(HttpStatusCode.InternalServerError, new { error = ApiErrorMessages.InternalServerError });
         }
     }
 
@@ -110,11 +122,11 @@ public class Function
     {
         var jwtTokenValidator = _serviceProvider.GetRequiredService<JwtTokenValidator>();
         if (!request.Headers.TryGetValue("Authorization", out var authorization) || string.IsNullOrWhiteSpace(authorization))
-            throw new HttpResponseException(HttpStatusCode.Unauthorized, ApiResponseMessages.TokenMissing);
+            throw new HttpResponseException(HttpStatusCode.Unauthorized, ApiErrorMessages.TokenMissing);
 
         var token = authorization.Replace("Bearer ", "", StringComparison.OrdinalIgnoreCase);
         if (!jwtTokenValidator.ValidateToken(token, out var userId))
-            throw new HttpResponseException(HttpStatusCode.Unauthorized, ApiResponseMessages.InvalidToken);
+            throw new HttpResponseException(HttpStatusCode.Unauthorized, ApiErrorMessages.InvalidToken);
 
         return userId;
     }
@@ -124,19 +136,19 @@ public class Function
         var bankAccountService = _serviceProvider.GetRequiredService<IBankAccountService>();
 
         if (!await bankAccountService.AccountBelongsToUserAsync(accountId, userId))
-            throw new HttpResponseException(HttpStatusCode.Forbidden, ApiResponseMessages.AccountNotBelongToUser);
+            throw new HttpResponseException(HttpStatusCode.Forbidden, ApiErrorMessages.AccountNotBelongToUser);
 
         bool success = operation switch
         {
             BalanceOperation.Add => await bankAccountService.AddBalanceAsync(accountId, amount),
             BalanceOperation.Debit => await bankAccountService.DebitBalanceAsync(accountId, amount),
-            _ => throw new HttpResponseException(HttpStatusCode.BadRequest, ApiResponseMessages.InvalidOperation)
+            _ => throw new HttpResponseException(HttpStatusCode.BadRequest, ApiErrorMessages.InvalidOperation)
         };
 
         if (!success)
             throw new HttpResponseException(HttpStatusCode.BadRequest, operation == BalanceOperation.Add
-                ? ApiResponseMessages.AddBalanceFailed
-                : ApiResponseMessages.InsufficientBalance);
+                ? ApiErrorMessages.AddBalanceFailed
+                : ApiErrorMessages.InsufficientBalance);
     }
 
     private async Task<APIGatewayProxyResponse> AddBalance(APIGatewayProxyRequest request)
@@ -150,14 +162,14 @@ public class Function
             return BuildResponse(HttpStatusCode.BadRequest, new
             {
                 error = addBalanceRequest.Amount > (int)BalanceConfiguration.BalanceMaximumValue
-                    ? ApiResponseMessages.ExceededMaximumAmount
-                    : ApiResponseMessages.InvalidAmount
+                    ? ApiErrorMessages.ExceededMaximumAmount
+                    : ApiErrorMessages.InvalidAmount
             });
         }
 
         await UpdateBalanceAsync(userId, addBalanceRequest.AccountId, addBalanceRequest.Amount, BalanceOperation.Add);
 
-        return BuildResponse(HttpStatusCode.OK, new { message = ApiResponseMessages.AddBalanceSuccess });
+        return BuildResponse(HttpStatusCode.OK, new { message = ApiErrorMessages.AddBalanceSuccess });
     }
 
     private async Task<APIGatewayProxyResponse> DebitBalance(APIGatewayProxyRequest request)
@@ -167,7 +179,7 @@ public class Function
 
         await UpdateBalanceAsync(userId, debitBalanceRequest.AccountId, debitBalanceRequest.Amount, BalanceOperation.Debit);
 
-        return BuildResponse(HttpStatusCode.OK, new { message = ApiResponseMessages.DebitBalanceSuccess });
+        return BuildResponse(HttpStatusCode.OK, new { message = ApiErrorMessages.DebitBalanceSuccess });
     }
 
     private async Task<APIGatewayProxyResponse> RefreshToken(APIGatewayProxyRequest request)
@@ -180,17 +192,22 @@ public class Function
 
         var storedRefreshToken = await refreshTokenService.GetByTokenAsync(refreshTokenRequest.RefreshToken);
         if (storedRefreshToken == null || storedRefreshToken.ExpiresAt <= DateTime.UtcNow)
-            throw new HttpResponseException(HttpStatusCode.Unauthorized, ApiResponseMessages.InvalidRefreshToken);
+            throw new HttpResponseException(HttpStatusCode.Unauthorized, ApiErrorMessages.InvalidRefreshToken);
 
         await refreshTokenService.InvalidateTokenAsync(refreshTokenRequest.RefreshToken);
 
         var user = await userService.GetUserByIdAsync(storedRefreshToken.UserId) 
-            ?? throw new HttpResponseException(HttpStatusCode.NotFound, ApiResponseMessages.UserNotFound);
+            ?? throw new HttpResponseException(HttpStatusCode.NotFound, ApiErrorMessages.UserNotFound);
 
         if (!user.IsActive())
-            throw new HttpResponseException(HttpStatusCode.Conflict, ApiResponseMessages.UserInactive);
+            throw new HttpResponseException(HttpStatusCode.Conflict, ApiErrorMessages.UserInactive);
 
-        var newAccessToken = jwtTokenGenerator.GenerateToken(user);
+        var newAccessToken = jwtTokenGenerator.GenerateToken(new UserEntity
+        {
+            Id = user.Id,
+            Status = user.Status,
+            Username = user.Username
+        });
         var token = await refreshTokenService.AddAsync(user.Id);
 
         return BuildResponse(HttpStatusCode.OK, new TokenResponse
@@ -210,12 +227,17 @@ public class Function
         var loginRequest = ParseRequestOrThrow<TokenRequest>(request.Body);
 
         var user = await userService.AuthenticateAsync(loginRequest.Username, loginRequest.Password)
-            ?? throw new HttpResponseException(HttpStatusCode.Unauthorized, ApiResponseMessages.InvalidCredentials);
+            ?? throw new HttpResponseException(HttpStatusCode.Unauthorized, ApiErrorMessages.InvalidCredentials);
 
         if (!user.IsActive())
-            throw new HttpResponseException(HttpStatusCode.Conflict, ApiResponseMessages.UserInactive);
+            throw new HttpResponseException(HttpStatusCode.Conflict, ApiErrorMessages.UserInactive);
 
-        var accessToken = jwtTokenGenerator.GenerateToken(user);
+        var accessToken = jwtTokenGenerator.GenerateToken(new UserEntity
+        {
+            Id = user.Id,
+            Status = user.Status,
+            Username = user.Username
+        });
         var refreshToken = await refreshTokenService.AddAsync(user.Id);
 
         return BuildResponse(HttpStatusCode.OK, new TokenResponse
@@ -235,11 +257,11 @@ public class Function
         var isRevoked = await refreshTokenService.InvalidateTokenAsync(logoutRequest.RefreshToken);
 
         if (!isRevoked)
-            throw new HttpResponseException(HttpStatusCode.BadRequest, ApiResponseMessages.InvalidToken);
+            throw new HttpResponseException(HttpStatusCode.BadRequest, ApiErrorMessages.InvalidToken);
 
         return BuildResponse(HttpStatusCode.OK, new
         {
-            message = ApiResponseMessages.LogoutSuccessful
+            message = ApiErrorMessages.LogoutSuccessful
         });
     }
 
@@ -250,17 +272,17 @@ public class Function
         var userRegisterRequest = ParseRequestOrThrow<UserRegisterRequest>(request.Body);
 
         if (!userRegisterRequest.IsValid())
-            throw new HttpResponseException(HttpStatusCode.BadRequest, ApiResponseMessages.UserPasswordMatchError);
+            throw new HttpResponseException(HttpStatusCode.BadRequest, ApiErrorMessages.UserPasswordMatchError);
 
         var userFound = await userService.GetUserByUsernameAsync(userRegisterRequest.Username);
 
         if (userFound != null)
-            throw new HttpResponseException(HttpStatusCode.Conflict, ApiResponseMessages.UsernameAlreadyExists);
+            throw new HttpResponseException(HttpStatusCode.Conflict, ApiErrorMessages.UsernameAlreadyExists);
 
         if (!await userService.CreateUserAsync(userRegisterRequest.Username, userRegisterRequest.Password, userRegisterRequest.Name))
-            throw new HttpResponseException(HttpStatusCode.InternalServerError, ApiResponseMessages.ErrorCreatingUser);
+            throw new HttpResponseException(HttpStatusCode.InternalServerError, ApiErrorMessages.ErrorCreatingUser);
 
-        return BuildResponse(HttpStatusCode.Created, new { message = ApiResponseMessages.UserCreatedSuccessfully });
+        return BuildResponse(HttpStatusCode.Created, new { message = ApiErrorMessages.UserCreatedSuccessfully });
     }
 
     private async Task<APIGatewayProxyResponse> GetProfile(APIGatewayProxyRequest request)
@@ -269,7 +291,7 @@ public class Function
         var userService = _serviceProvider.GetRequiredService<IUserService>();
         var bankAccountService = _serviceProvider.GetRequiredService<IBankAccountService>();
 
-        var user = await userService.GetUserByIdAsync(userId) ?? throw new HttpResponseException(HttpStatusCode.NotFound, ApiResponseMessages.UserNotFound);
+        var user = await userService.GetUserByIdAsync(userId) ?? throw new HttpResponseException(HttpStatusCode.NotFound, ApiErrorMessages.UserNotFound);
         var accounts = await bankAccountService.GetBankAccountsByUserIdAsync(userId);
 
         return BuildResponse(HttpStatusCode.OK, new UserProfileResponse

@@ -1,8 +1,10 @@
-﻿using System.Data;
-using ArithmeticCalculatorUserApi.Infrastructure.Security;
-using ArithmeticCalculatorUserApi.Infrastructure.Extensions;
-using MySql.Data.MySqlClient;
+﻿using ArithmeticCalculatorUserApi.Infrastructure.Extensions;
+using ArithmeticCalculatorUserApi.Infrastructure.Interfaces.Repositories;
+using ArithmeticCalculatorUserApi.Infrastructure.Interfaces.Services;
 using ArithmeticCalculatorUserApi.Infrastructure.Models;
+using ArithmeticCalculatorUserApi.Infrastructure.Security;
+using MySql.Data.MySqlClient;
+using System.Data;
 
 namespace ArithmeticCalculatorUserApi.Infrastructure.Repositories
 {
@@ -11,18 +13,19 @@ namespace ArithmeticCalculatorUserApi.Infrastructure.Repositories
         private readonly string _connectionString;
         private readonly decimal _PROMOTIONAL_AMOUNT;
         private readonly IBankAccountRepository _bankAccountRepository;
+        private readonly IDbConnectionService _dbConnectionService;
 
-        public UserRepository(IBankAccountRepository bankAccountRepository)
+        public UserRepository(IBankAccountRepository bankAccountRepository, IDbConnectionService dbConnectionService)
         {
             _bankAccountRepository = bankAccountRepository;
+            _dbConnectionService = dbConnectionService;
             _connectionString = Environment.GetEnvironmentVariable("MYSQL_CONNECTION_STRING") ?? throw new InvalidOperationException("Connection string is not set.");
             _PROMOTIONAL_AMOUNT = decimal.Parse(Environment.GetEnvironmentVariable("PROMOTIONAL_AMOUNT") ?? throw new InvalidOperationException("Promotional amount is not set."));
         }
 
         public async Task<bool> CreateUserAsync(string username, string password, string name)
         {
-            using var connection = new MySqlConnection(_connectionString);
-            await connection.OpenAsync();
+            using var connection = await _dbConnectionService.CreateConnectionAsync();
             using var transaction = await connection.BeginTransactionAsync();
 
             try
@@ -34,7 +37,7 @@ namespace ArithmeticCalculatorUserApi.Infrastructure.Repositories
                     INSERT INTO user (id, username, password, name, user_status_id) 
                     VALUES (@Id, @Username, @Password, @Name, 1)";
 
-                var userInserted = await ExecuteNonQueryAsync(userQuery, new Dictionary<string, object>
+                var userInserted = await _dbConnectionService.ExecuteNonQueryAsync(userQuery, new Dictionary<string, object>
                 {
                     { "@Id", userId },
                     { "@Username", username },
@@ -89,9 +92,7 @@ namespace ArithmeticCalculatorUserApi.Infrastructure.Repositories
 
         private async Task<UserEntity?> GetUserFromQueryAsync(string query, Dictionary<string, object> parameters)
         {
-            using var connection = new MySqlConnection(_connectionString);
-            await connection.OpenAsync();
-
+            using var connection = await _dbConnectionService.CreateConnectionAsync();
             using var cmd = new MySqlCommand(query, connection);
             foreach (var param in parameters)
             {
@@ -112,17 +113,6 @@ namespace ArithmeticCalculatorUserApi.Infrastructure.Repositories
             }
 
             return null;
-        }
-
-        private async Task<int> ExecuteNonQueryAsync(string query, Dictionary<string, object> parameters, MySqlConnection connection, MySqlTransaction? transaction = null)
-        {
-            using var cmd = new MySqlCommand(query, connection, transaction);
-            foreach (var param in parameters)
-            {
-                cmd.Parameters.AddWithValue(param.Key, param.Value);
-            }
-
-            return await cmd.ExecuteNonQueryAsync();
         }
     }
 }
