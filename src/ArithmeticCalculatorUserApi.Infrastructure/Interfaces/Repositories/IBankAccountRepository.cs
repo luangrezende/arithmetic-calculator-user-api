@@ -1,7 +1,7 @@
 ﻿using ArithmeticCalculatorUserApi.Infrastructure.Models;
 using MySql.Data.MySqlClient;
 
-namespace ArithmeticCalculatorUserApi.Infrastructure.Repositories
+namespace ArithmeticCalculatorUserApi.Infrastructure.Interfaces.Repositories
 {
     public interface IBankAccountRepository
     {

@@ -1,10 +1,10 @@
 ﻿using ArithmeticCalculatorUserApi.Infrastructure.Models;
 
-namespace ArithmeticCalculatorUserApi.Infrastructure.Repositories
+namespace ArithmeticCalculatorUserApi.Infrastructure.Interfaces.Repositories
 {
     public interface IRefreshTokenRepository
     {
-        Task<bool> AddAsync(RefreshTokenEntity refreshToken);
+        Task<RefreshTokenEntity> AddAsync(RefreshTokenEntity refreshToken);
 
         Task<RefreshTokenEntity?> GetByTokenAsync(string token);
 
