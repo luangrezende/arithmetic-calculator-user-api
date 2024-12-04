@@ -1,49 +1,126 @@
-# AWS Lambda Empty Function Project
+# Arithmetic Calculator User API
 
-This starter project consists of:
-* Function.cs - class file containing a class with a single function handler method
-* aws-lambda-tools-defaults.json - default argument settings for use with Visual Studio and command line deployment tools for AWS
+This API manages user-related operations for the Arithmetic Calculator platform, developed using AWS Lambda and .NET 8.
 
-You may also have a test project depending on the options selected.
+## Prerequisites
 
-The generated function handler is a simple method accepting a string argument that returns the uppercase equivalent of the input string. Replace the body of this method, and parameters, to suit your needs. 
+Ensure the following software is installed on your machine:
 
-## Here are some steps to follow from Visual Studio:
+1. **.NET 8 SDK** - [Download](https://dotnet.microsoft.com/download/dotnet/8.0)
+2. **AWS CLI** - [Installation Instructions](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html)
+3. **AWS Lambda Tools for .NET** - Install using:
+   ```bash
+   dotnet tool install -g Amazon.Lambda.Tools
+   ```
+4. **Docker** - [Install Docker](https://www.docker.com/products/docker-desktop)
 
-To deploy your function to AWS Lambda, right click the project in Solution Explorer and select *Publish to AWS Lambda*.
+---
 
-To view your deployed function open its Function View window by double-clicking the function name shown beneath the AWS Lambda node in the AWS Explorer tree.
+## Running Locally
 
-To perform testing against your deployed function use the Test Invoke tab in the opened Function View window.
+### 1. Clone the Repository
 
-To configure event sources for your deployed function, for example to have your function invoked when an object is created in an Amazon S3 bucket, use the Event Sources tab in the opened Function View window.
+Clone the repository to your local machine:
 
-To update the runtime configuration of your deployed function use the Configuration tab in the opened Function View window.
-
-To view execution logs of invocations of your function use the Logs tab in the opened Function View window.
-
-## Here are some steps to follow to get started from the command line:
-
-Once you have edited your template and code you can deploy your application using the [Amazon.Lambda.Tools Global Tool](https://github.com/aws/aws-extensions-for-dotnet-cli#aws-lambda-amazonlambdatools) from the command line.
-
-Install Amazon.Lambda.Tools Global Tools if not already installed.
-```
-    dotnet tool install -g Amazon.Lambda.Tools
+```bash
+git clone https://github.com/luangrezende/arithmetic-calculator-user-api.git
+cd arithmetic-calculator-user-api
 ```
 
-If already installed check if new version is available.
-```
-    dotnet tool update -g Amazon.Lambda.Tools
+### 2. Restore Dependencies
+
+Restore required NuGet packages:
+
+```bash
+dotnet restore
 ```
 
-Execute unit tests
-```
-    cd "ArithmeticCalculatorUserApi/test/ArithmeticCalculatorUserApi.Tests"
-    dotnet test
+### 3. Run the API Locally
+
+Use the AWS Lambda Test Tool to run the API locally:
+
+```bash
+dotnet lambda run-server
 ```
 
-Deploy function to AWS Lambda
+The API will be accessible at `http://localhost:5000`.
+
+---
+
+## Running with Docker
+
+### 1. Build the Docker Image
+
+Build the Docker image using the following command:
+
+```bash
+docker build -t arithmetic-calculator-user-api .
 ```
-    cd "ArithmeticCalculatorUserApi/src/ArithmeticCalculatorUserApi"
-    dotnet lambda deploy-function
+
+### 2. Run the Docker Container
+
+Run the Docker container:
+
+```bash
+docker run -p 5000:5000 arithmetic-calculator-user-api
 ```
+
+The API will now be available at `http://localhost:5000`.
+
+---
+
+## Project Structure
+
+```
+├── src/
+│   ├── ArithmeticCalculatorUserApi.Api/        # Main API project
+│   ├── ArithmeticCalculatorUserApi.Domain/     # Domain logic
+│   ├── ArithmeticCalculatorUserApi.Infrastructure/ # Infrastructure
+├── tests/
+│   ├── ArithmeticCalculatorUserApi.Domain.Tests/ # Unit tests
+├── .github/workflows/    # CI/CD configurations
+├── .gitignore
+├── ArithmeticCalculatorUserApi.sln
+└── README.md
+```
+
+---
+
+## Configuration
+
+Update the `aws-lambda-tools-defaults.json` file as needed for your Lambda configuration. Example:
+
+```json
+{
+  "function-name": "ArithmeticCalculatorUserApi",
+  "function-handler": "ArithmeticCalculatorUserApi::ArithmeticCalculatorUserApi.Function::FunctionHandler",
+  "framework": "net8.0",
+  "memory-size": 256,
+  "timeout": 30,
+  "region": "us-east-1"
+}
+```
+
+---
+
+## Testing the API
+
+Use tools like **Postman** or **curl** to test the API. Example with `curl`:
+
+```bash
+curl -X GET http://localhost:5000/api/users
+```
+
+---
+
+## Resources
+
+- [AWS Lambda for .NET](https://docs.aws.amazon.com/lambda/latest/dg/lambda-dotnet.html)
+- [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-quickstart.html)
+- [Docker Documentation](https://docs.docker.com/get-started/)
+
+---
+
+## License
+
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for more information.
