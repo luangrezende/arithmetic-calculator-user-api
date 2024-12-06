@@ -25,15 +25,15 @@ jobs:
         run: echo "${HOME}/.dotnet/tools" >> $GITHUB_PATH
 
       - name: Install Dependencies
-        working-directory: src/ArithmeticCalculatorUserApi.Api
+        working-directory: src/ArithmeticCalculatorUserApi.Presentation
         run: dotnet restore
 
       - name: Create output directory
-        run: mkdir -p src/ArithmeticCalculatorUserApi.Api/output
+        run: mkdir -p src/ArithmeticCalculatorUserApi.Presentation/output
 
       - name: Build and Package Lambda
-        working-directory: src/ArithmeticCalculatorUserApi.Api
-        run: dotnet lambda package --configuration Release --output-package /home/runner/work/${{ github.repository }}/src/ArithmeticCalculatorUserApi.Api/output/deployment.zip
+        working-directory: src/ArithmeticCalculatorUserApi.Presentation
+        run: dotnet lambda package --configuration Release --output-package /home/runner/work/${{ github.repository }}/src/ArithmeticCalculatorUserApi.Presentation/output/deployment.zip
 
       - name: Configure AWS CLI
         uses: aws-actions/configure-aws-credentials@v2
@@ -44,17 +44,17 @@ jobs:
 
       - name: Deploy Lambda Function
         run: |
-          if aws lambda get-function --function-name ArithmeticCalculatorUserApi; then
+          if aws lambda get-function --function-name ArithmeticCalculatorUserApi.Presentation; then
             echo "Updating Lambda function"
             aws lambda update-function-code \
-              --function-name ArithmeticCalculatorUserApi \
-              --zip-file fileb:///home/runner/work/${{ github.repository }}/src/ArithmeticCalculatorUserApi.Api/output/deployment.zip
+              --function-name ArithmeticCalculatorUserApi.Presentation \
+              --zip-file fileb:///home/runner/work/${{ github.repository }}/src/ArithmeticCalculatorUserApi.Presentation/output/deployment.zip
           else
             echo "Creating Lambda function"
             aws lambda create-function \
-              --function-name ArithmeticCalculatorUserApi \
+              --function-name ArithmeticCalculatorUserApi.Presentation \
               --runtime dotnet8 \
               --role arn:aws:iam::565393042425:role/ArithmeticCalculatorUserLambdaRole\
-              --handler ArithmeticCalculatorUserApi::ArithmeticCalculatorUserApi.Function::FunctionHandler \
-              --zip-file fileb:///home/runner/work/${{ github.repository }}/src/ArithmeticCalculatorUserApi.Api/output/deployment.zip
+              --handler ArithmeticCalculatorUserApi.Presentation::ArithmeticCalculatorUserApi.Presentation.Function::FunctionHandler \
+              --zip-file fileb:///home/runner/work/${{ github.repository }}/src/ArithmeticCalculatorUserApi.Presentation/output/deployment.zip
           fi

@@ -1,8 +1,8 @@
 ﻿using Moq;
-using ArithmeticCalculatorUserApi.Infrastructure.Repositories;
-using ArithmeticCalculatorUserApi.Infrastructure.Models;
 using MySql.Data.MySqlClient;
 using ArithmeticCalculatorUserApi.Infrastructure.Interfaces.Services;
+using ArithmeticCalculatorUserApi.Infrastructure.Persistence;
+using ArithmeticCalculatorUserApi.Domain.Entities;
 
 namespace ArithmeticCalculatorUserApi.Infrastructure.Tests.Repositories
 {
@@ -97,6 +97,10 @@ namespace ArithmeticCalculatorUserApi.Infrastructure.Tests.Repositories
             // Arrange
             var accountId = Guid.NewGuid();
             var amount = 100m;
+
+            _mockDbConnectionService
+                .Setup(x => x.CreateConnectionAsync())
+                .ReturnsAsync(new MySqlConnection());
 
             _mockDbConnectionService
                 .Setup(x => x.ExecuteScalarAsync<decimal>(It.IsAny<string>(), It.IsAny<Dictionary<string, object>>(), It.IsAny<MySqlConnection>(), It.IsAny<MySqlTransaction>()))
