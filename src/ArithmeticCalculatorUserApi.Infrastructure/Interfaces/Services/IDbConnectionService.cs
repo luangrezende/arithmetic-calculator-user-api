@@ -4,9 +4,17 @@ namespace ArithmeticCalculatorUserApi.Infrastructure.Interfaces.Services
 {
     public interface IDbConnectionService
     {
-        Task<int> ExecuteNonQueryAsync(string query, Dictionary<string, object> parameters, MySqlConnection connection, MySqlTransaction? transaction = null);
+        Task<int> ExecuteNonQueryAsync(
+            string query, 
+            Dictionary<string, object> parameters, 
+            MySqlConnection connection, 
+            MySqlTransaction? transaction = null);
 
-        Task<object?> ExecuteScalarAsync(string query, Dictionary<string, object> parameters, MySqlConnection connection);
+        Task<T?> ExecuteScalarAsync<T>(
+             string query,
+             Dictionary<string, object> parameters,
+             MySqlConnection connection,
+             MySqlTransaction? transaction = null);
 
         Task<MySqlConnection> CreateConnectionAsync();
     }

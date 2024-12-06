@@ -19,26 +19,47 @@ namespace ArithmeticCalculatorUserApi.Infrastructure.Data
             return connection;
         }
 
-        public async Task<int> ExecuteNonQueryAsync(string query, Dictionary<string, object> parameters, MySqlConnection connection, MySqlTransaction? transaction = null)
+        public async Task<int> ExecuteNonQueryAsync(
+            string query,
+            Dictionary<string, object> parameters,
+            MySqlConnection connection,
+            MySqlTransaction? transaction = null)
         {
+            if (connection.State != System.Data.ConnectionState.Open)
+            {
+                await connection.OpenAsync();
+            }
+
             using var cmd = new MySqlCommand(query, connection, transaction);
             foreach (var param in parameters)
             {
-                cmd.Parameters.AddWithValue(param.Key, param.Value);
+                cmd.Parameters.AddWithValue(param.Key, param.Value ?? DBNull.Value);
             }
 
             return await cmd.ExecuteNonQueryAsync();
         }
 
-        public async Task<object?> ExecuteScalarAsync(string query, Dictionary<string, object> parameters, MySqlConnection connection)
+
+        public async Task<T?> ExecuteScalarAsync<T>(
+            string query,
+            Dictionary<string, object> parameters,
+            MySqlConnection connection,
+            MySqlTransaction? transaction = null)
         {
-            using var cmd = new MySqlCommand(query, connection);
-            foreach (var param in parameters)
+            if (connection.State != System.Data.ConnectionState.Open)
             {
-                cmd.Parameters.AddWithValue(param.Key, param.Value);
+                await connection.OpenAsync();
             }
 
-            return await cmd.ExecuteScalarAsync();
+            using var cmd = new MySqlCommand(query, connection, transaction);
+            foreach (var param in parameters)
+            {
+                cmd.Parameters.AddWithValue(param.Key, param.Value ?? DBNull.Value);
+            }
+
+            var result = await cmd.ExecuteScalarAsync();
+
+            return result != null && result != DBNull.Value ? (T)Convert.ChangeType(result, typeof(T)) : default;
         }
     }
 }

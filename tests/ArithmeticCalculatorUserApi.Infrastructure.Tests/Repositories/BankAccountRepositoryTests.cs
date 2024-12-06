@@ -31,7 +31,7 @@ namespace ArithmeticCalculatorUserApi.Infrastructure.Tests.Repositories
             };
 
             _mockDbConnectionService
-                .Setup(x => x.ExecuteScalarAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object>>(), It.IsAny<MySqlConnection>()))
+                .Setup(x => x.ExecuteScalarAsync<int>(It.IsAny<string>(), It.IsAny<Dictionary<string, object>>(), It.IsAny<MySqlConnection>(), It.IsAny<MySqlTransaction>()))
                 .ReturnsAsync(1);
 
             // Act
@@ -57,7 +57,7 @@ namespace ArithmeticCalculatorUserApi.Infrastructure.Tests.Repositories
 
             // Setup mock
             _mockDbConnectionService
-                .Setup(x => x.ExecuteScalarAsync(mockQuery, mockParameters, It.IsAny<MySqlConnection>()))
+                .Setup(x => x.ExecuteScalarAsync<int>(mockQuery, mockParameters, It.IsAny<MySqlConnection>(), It.IsAny<MySqlTransaction>()))
                 .ReturnsAsync(0);
 
             // Act
@@ -81,7 +81,7 @@ namespace ArithmeticCalculatorUserApi.Infrastructure.Tests.Repositories
             };
 
             _mockDbConnectionService
-                 .Setup(x => x.ExecuteScalarAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object>>(), It.IsAny<MySqlConnection>()))
+                 .Setup(x => x.ExecuteScalarAsync<int>(It.IsAny<string>(), It.IsAny<Dictionary<string, object>>(), It.IsAny<MySqlConnection>(), It.IsAny<MySqlTransaction>()))
                  .ReturnsAsync(1);
 
             // Act
@@ -99,7 +99,7 @@ namespace ArithmeticCalculatorUserApi.Infrastructure.Tests.Repositories
             var amount = 100m;
 
             _mockDbConnectionService
-                .Setup(x => x.ExecuteScalarAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object>>(), It.IsAny<MySqlConnection>()))
+                .Setup(x => x.ExecuteScalarAsync<decimal>(It.IsAny<string>(), It.IsAny<Dictionary<string, object>>(), It.IsAny<MySqlConnection>(), It.IsAny<MySqlTransaction>()))
                 .ReturnsAsync(50m);
 
             // Act
@@ -117,7 +117,7 @@ namespace ArithmeticCalculatorUserApi.Infrastructure.Tests.Repositories
             var amount = 100m;
 
             _mockDbConnectionService
-                .Setup(x => x.ExecuteScalarAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object>>(), It.IsAny<MySqlConnection>()))
+                .Setup(x => x.ExecuteScalarAsync<decimal>(It.IsAny<string>(), It.IsAny<Dictionary<string, object>>(), It.IsAny<MySqlConnection>(), It.IsAny<MySqlTransaction>()))
                 .ReturnsAsync(200m);
 
             var mockQuery = "UPDATE bank_account SET balance = balance - @Amount, updated_at = CURRENT_TIMESTAMP WHERE id = @AccountId";
@@ -156,7 +156,7 @@ namespace ArithmeticCalculatorUserApi.Infrastructure.Tests.Repositories
             };
 
             _mockDbConnectionService
-                .Setup(x => x.ExecuteScalarAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object>>(), It.IsAny<MySqlConnection>()))
+                .Setup(x => x.ExecuteScalarAsync<List<BankAccountEntity>>(It.IsAny<string>(), It.IsAny<Dictionary<string, object>>(), It.IsAny<MySqlConnection>(), It.IsAny<MySqlTransaction>()))
                 .ReturnsAsync(mockData);
 
             // Act

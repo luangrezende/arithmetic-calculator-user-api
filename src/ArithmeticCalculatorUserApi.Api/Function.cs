@@ -72,30 +72,29 @@ public class Function
                 "POST" when request.Path == "/v1/user/auth/register" => await Register(request),
                 "POST" when request.Path == "/v1/user/account/balance" => await AddBalance(request),
                 "PUT" when request.Path == "/v1/user/account/balance" => await DebitBalance(request),
-                _ => BuildResponse(HttpStatusCode.NotFound, new { error = ApiErrorMessages.EndpointNotFound }),
+                _ => BuildResponse(HttpStatusCode.NotFound, new { error = ApiErrorMessages.EndpointNotFound })
             };
         }
         catch (HttpResponseException ex)
         {
-            context.Logger.LogError($"HttpResponseException: {ex.Message}");
-            return BuildResponse(ex.StatusCode, new { error = ex.ResponseBody ?? ApiErrorMessages.GenericError });
+            LogError(context, "HttpResponseException", ex);
+            return BuildResponse(ex.StatusCode, new { error = ex.Message ?? ApiErrorMessages.GenericError });
         }
-        catch (SecurityTokenExpiredException ex)
+        catch (SecurityTokenException ex)
         {
-            context.Logger.LogError($"SecurityTokenExpiredException: {ex.Message}");
-            return BuildResponse(HttpStatusCode.Unauthorized, new { error = ApiErrorMessages.TokenExpired });
-        }
-        catch (SecurityTokenMalformedException ex)
-        {
-            context.Logger.LogError($"SecurityTokenMalformedException: {ex.Message}");
+            LogError(context, "SecurityTokenInvalidException", ex);
             return BuildResponse(HttpStatusCode.BadRequest, new { error = ApiErrorMessages.InvalidToken });
         }
         catch (Exception ex)
         {
-            context.Logger.LogError($"Exception: {ex.Message}");
-            //return BuildResponse(HttpStatusCode.InternalServerError, new { error = ApiErrorMessages.InternalServerError });
-            return BuildResponse(HttpStatusCode.InternalServerError, new { error = ex.Message });
+            LogError(context, "Unhandled Exception", ex);
+            return BuildResponse(HttpStatusCode.InternalServerError, new { error = ApiErrorMessages.InternalServerError });
         }
+    }
+
+    private void LogError(ILambdaContext context, string errorType, Exception ex)
+    {
+        context.Logger.LogError($"{errorType}: {ex.Message}");
     }
 
     private T ParseRequestOrThrow<T>(string requestBody)
@@ -113,7 +112,7 @@ public class Function
                 .Where(msg => !string.IsNullOrWhiteSpace(msg))
                 .ToList();
 
-            throw new HttpResponseException(HttpStatusCode.BadRequest, errorMessages!.FirstOrDefault()); ;
+            throw new HttpResponseException(HttpStatusCode.BadRequest, errorMessages.FirstOrDefault()!); ;
         }
 
         return parsedRequest!;
@@ -122,10 +121,14 @@ public class Function
     private Guid ValidateTokenOrThrow(APIGatewayProxyRequest request)
     {
         var jwtTokenValidator = _serviceProvider.GetRequiredService<JwtTokenValidator>();
-        if (!request.Headers.TryGetValue("Authorization", out var authorization) || string.IsNullOrWhiteSpace(authorization))
+
+        if (request.Headers == null || !request.Headers.TryGetValue("Authorization", out var authorization) || string.IsNullOrWhiteSpace(authorization))
             throw new HttpResponseException(HttpStatusCode.Unauthorized, ApiErrorMessages.TokenMissing);
 
         var token = authorization.Replace("Bearer ", "", StringComparison.OrdinalIgnoreCase);
+        if (string.IsNullOrWhiteSpace(token))
+            throw new HttpResponseException(HttpStatusCode.Unauthorized, ApiErrorMessages.TokenMissing);
+
         if (!jwtTokenValidator.ValidateToken(token, out var userId))
             throw new HttpResponseException(HttpStatusCode.Unauthorized, ApiErrorMessages.InvalidToken);
 
@@ -209,6 +212,7 @@ public class Function
             Status = user.Status,
             Username = user.Username
         });
+
         var token = await refreshTokenService.AddAsync(user.Id);
 
         return BuildResponse(HttpStatusCode.OK, new TokenResponse

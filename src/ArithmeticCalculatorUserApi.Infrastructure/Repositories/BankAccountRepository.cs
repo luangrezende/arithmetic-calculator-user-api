@@ -23,31 +23,51 @@ namespace ArithmeticCalculatorUserApi.Infrastructure.Repositories
                 WHERE id = @AccountId AND user_id = @UserId";
 
             using var connection = await _dbConnectionService.CreateConnectionAsync();
-            var result = await _dbConnectionService.ExecuteScalarAsync(query, new Dictionary<string, object>
+            var result = await _dbConnectionService.ExecuteScalarAsync<int>(query, new Dictionary<string, object>
             {
                 { "@AccountId", accountId },
                 { "@UserId", userId }
             }, connection);
 
-            return Convert.ToInt32(result ?? 0) > 0;
+            return result > 0;
         }
 
         public async Task<bool> AddBalanceAsync(Guid accountId, decimal amount)
         {
-            const string query = @"
+            const string updateQuery = @"
                 UPDATE bank_account
                 SET balance = balance + @Amount,
                     updated_at = CURRENT_TIMESTAMP
                 WHERE id = @AccountId";
 
+            const string insertRecordQuery = @"
+                INSERT INTO balance_record (id, account_id, amount, type)
+                VALUES (@Id, @AccountId, @Amount, 'credit')";
+
             using var connection = await _dbConnectionService.CreateConnectionAsync();
-            var result = await _dbConnectionService.ExecuteNonQueryAsync(query, new Dictionary<string, object>
+            using var transaction = await connection.BeginTransactionAsync();
+
+            var result = await _dbConnectionService.ExecuteNonQueryAsync(updateQuery, new Dictionary<string, object>
             {
                 { "@Amount", amount },
                 { "@AccountId", accountId }
-            }, connection);
+            }, connection, transaction);
 
-            return result > 0;
+            if (result == 0)
+            {
+                await transaction.RollbackAsync();
+                return false;
+            }
+
+            await _dbConnectionService.ExecuteNonQueryAsync(insertRecordQuery, new Dictionary<string, object>
+            {
+                { "@Id", Guid.NewGuid() },
+                { "@Amount", amount },
+                { "@AccountId", accountId }
+            }, connection, transaction);
+
+            await transaction.CommitAsync();
+            return true;
         }
 
         public async Task<bool> DebitBalanceAsync(Guid accountId, decimal amount)
@@ -57,31 +77,51 @@ namespace ArithmeticCalculatorUserApi.Infrastructure.Repositories
                 FROM bank_account 
                 WHERE id = @AccountId";
 
-            const string debitQuery = @"
+            const string updateQuery = @"
                 UPDATE bank_account
                 SET balance = balance - @Amount,
                     updated_at = CURRENT_TIMESTAMP
                 WHERE id = @AccountId";
 
-            using var connection = await _dbConnectionService.CreateConnectionAsync();
+            const string insertRecordQuery = @"
+                INSERT INTO balance_record (id, account_id, amount, type)
+                VALUES (@Id, @AccountId, @Amount, 'debit')";
 
-            var balanceObj = await _dbConnectionService.ExecuteScalarAsync(checkBalanceQuery, new Dictionary<string, object>
+            using var connection = await _dbConnectionService.CreateConnectionAsync();
+            using var transaction = await connection.BeginTransactionAsync();
+
+            var balance = await _dbConnectionService.ExecuteScalarAsync<decimal>(checkBalanceQuery, new Dictionary<string, object>
             {
                 { "@AccountId", accountId }
-            }, connection);
+            }, connection, transaction);
 
-            if (balanceObj == null || Convert.ToDecimal(balanceObj) < amount)
+            if (balance < amount)
             {
+                await transaction.RollbackAsync();
                 return false;
             }
 
-            var result = await _dbConnectionService.ExecuteNonQueryAsync(debitQuery, new Dictionary<string, object>
+            var result = await _dbConnectionService.ExecuteNonQueryAsync(updateQuery, new Dictionary<string, object>
             {
                 { "@Amount", amount },
                 { "@AccountId", accountId }
-            }, connection);
+            }, connection, transaction);
 
-            return result > 0;
+            if (result == 0)
+            {
+                await transaction.RollbackAsync();
+                return false;
+            }
+
+            await _dbConnectionService.ExecuteNonQueryAsync(insertRecordQuery, new Dictionary<string, object>
+            {
+                { "@Id", Guid.NewGuid() },
+                { "@Amount", amount },
+                { "@AccountId", accountId }
+            }, connection, transaction);
+
+            await transaction.CommitAsync();
+            return true;
         }
 
         public async Task<IEnumerable<BankAccountEntity>> GetBankAccountsByUserIdAsync(Guid userId)

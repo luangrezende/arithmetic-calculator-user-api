@@ -6,12 +6,12 @@ namespace ArithmeticCalculatorUserApi.Helpers
     {
         public HttpStatusCode StatusCode { get; }
 
-        public object? ResponseBody { get; }
+        public string Message { get; }
 
-        public HttpResponseException(HttpStatusCode statusCode, object? responseBody = null)
+        public HttpResponseException(HttpStatusCode statusCode, string message)
         {
             StatusCode = statusCode;
-            ResponseBody = responseBody;
+            Message = message;
         }
     }
 }
