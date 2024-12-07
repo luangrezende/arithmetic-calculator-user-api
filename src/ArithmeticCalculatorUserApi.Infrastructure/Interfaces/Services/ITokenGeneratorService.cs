@@ -1,9 +1,10 @@
-﻿using ArithmeticCalculatorUserApi.Infrastructure.Models;
+﻿
+using ArithmeticCalculatorUserApi.Application.DTOs;
 
 namespace ArithmeticCalculatorUserApi.Infrastructure.Interfaces.Services
 {
     public interface ITokenGeneratorService
     {
-        string GenerateToken(UserEntity user);
+        string GenerateToken(UserDTO user);
     }
 }

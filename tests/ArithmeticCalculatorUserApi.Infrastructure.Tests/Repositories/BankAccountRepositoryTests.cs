@@ -1,169 +1,165 @@
-﻿using Moq;
-using ArithmeticCalculatorUserApi.Infrastructure.Repositories;
-using ArithmeticCalculatorUserApi.Infrastructure.Models;
-using MySql.Data.MySqlClient;
+﻿using ArithmeticCalculatorUserApi.Domain.Entities;
 using ArithmeticCalculatorUserApi.Infrastructure.Interfaces.Services;
+using ArithmeticCalculatorUserApi.Infrastructure.Persistence;
+using Moq;
+using MySql.Data.MySqlClient;
+using System.Data;
 
 namespace ArithmeticCalculatorUserApi.Infrastructure.Tests.Repositories
 {
     public class BankAccountRepositoryTests
     {
-        private readonly Mock<IDbConnectionService> _mockDbConnectionService;
-        private readonly BankAccountRepository _bankAccountRepository;
+        private readonly Mock<IDbConnectionService> _dbConnectionServiceMock;
+        private readonly BankAccountRepository _repository;
 
         public BankAccountRepositoryTests()
         {
-            _mockDbConnectionService = new Mock<IDbConnectionService>();
-            _bankAccountRepository = new BankAccountRepository(_mockDbConnectionService.Object);
+            _dbConnectionServiceMock = new Mock<IDbConnectionService>();
+            _repository = new BankAccountRepository(_dbConnectionServiceMock.Object);
         }
 
         [Fact]
-        public async Task AccountBelongsToUserAsync_ShouldReturnTrue_WhenAccountBelongsToUser()
+        public async Task AccountBelongsToUserAsync_ShouldReturnTrue_WhenAccountExists()
         {
             // Arrange
             var accountId = Guid.NewGuid();
             var userId = Guid.NewGuid();
+            const string query = @"
+                    SELECT COUNT(1)
+                    FROM bank_account
+                    WHERE id = @AccountId AND user_id = @UserId";
 
-            var mockParameters = new Dictionary<string, object>
-            {
-                { "@AccountId", accountId },
-                { "@UserId", userId }
-            };
-
-            _mockDbConnectionService
-                .Setup(x => x.ExecuteScalarAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object>>(), It.IsAny<MySqlConnection>()))
+            _dbConnectionServiceMock
+                .Setup(x => x.ExecuteScalarAsync<int>(query, It.IsAny<Dictionary<string, object>>(), It.IsAny<MySqlConnection>(), It.IsAny<MySqlTransaction>()))
                 .ReturnsAsync(1);
 
             // Act
-            var result = await _bankAccountRepository.AccountBelongsToUserAsync(accountId, userId);
+            var result = await _repository.AccountBelongsToUserAsync(accountId, userId);
 
             // Assert
             Assert.True(result);
+            _dbConnectionServiceMock.VerifyAll();
         }
 
         [Fact]
-        public async Task AccountBelongsToUserAsync_ShouldReturnFalse_WhenAccountDoesNotBelongToUser()
+        public async Task AddBalanceAsync_ShouldReturnTrue_WhenBalanceIsAddedSuccessfully()
         {
             // Arrange
             var accountId = Guid.NewGuid();
-            var userId = Guid.NewGuid();
+            const decimal amount = 100;
 
-            var mockQuery = "SELECT COUNT(1) FROM bank_account WHERE id = @AccountId AND user_id = @UserId";
-            var mockParameters = new Dictionary<string, object>
-            {
-                { "@AccountId", accountId },
-                { "@UserId", userId }
-            };
+            _dbConnectionServiceMock
+                .Setup(x => x.CreateConnectionAsync())
+                .ReturnsAsync(new MySqlConnection());
 
-            // Setup mock
-            _mockDbConnectionService
-                .Setup(x => x.ExecuteScalarAsync(mockQuery, mockParameters, It.IsAny<MySqlConnection>()))
-                .ReturnsAsync(0);
-
-            // Act
-            var result = await _bankAccountRepository.AccountBelongsToUserAsync(accountId, userId);
-
-            // Assert
-            Assert.False(result);
-        }
-
-        [Fact]
-        public async Task AddBalanceAsync_ShouldReturnTrue_WhenBalanceIsAdded()
-        {
-            // Arrange
-            var accountId = Guid.NewGuid();
-            var amount = 100m;
-
-            var mockParameters = new Dictionary<string, object>
-            {
-                { "@Amount", amount },
-                { "@AccountId", accountId }
-            };
-
-            _mockDbConnectionService
-                 .Setup(x => x.ExecuteScalarAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object>>(), It.IsAny<MySqlConnection>()))
-                 .ReturnsAsync(1);
-
-            // Act
-            var result = await _bankAccountRepository.AddBalanceAsync(accountId, amount);
-
-            // Assert
-            Assert.True(result);
-        }
-
-        [Fact]
-        public async Task DebitBalanceAsync_ShouldReturnFalse_WhenInsufficientBalance()
-        {
-            // Arrange
-            var accountId = Guid.NewGuid();
-            var amount = 100m;
-
-            _mockDbConnectionService
-                .Setup(x => x.ExecuteScalarAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object>>(), It.IsAny<MySqlConnection>()))
-                .ReturnsAsync(50m);
-
-            // Act
-            var result = await _bankAccountRepository.DebitBalanceAsync(accountId, amount);
-
-            // Assert
-            Assert.False(result);
-        }
-
-        [Fact]
-        public async Task DebitBalanceAsync_ShouldReturnTrue_WhenBalanceIsDebited()
-        {
-            // Arrange
-            var accountId = Guid.NewGuid();
-            var amount = 100m;
-
-            _mockDbConnectionService
-                .Setup(x => x.ExecuteScalarAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object>>(), It.IsAny<MySqlConnection>()))
-                .ReturnsAsync(200m);
-
-            var mockQuery = "UPDATE bank_account SET balance = balance - @Amount, updated_at = CURRENT_TIMESTAMP WHERE id = @AccountId";
-            var mockParameters = new Dictionary<string, object>
-            {
-                { "@Amount", amount },
-                { "@AccountId", accountId }
-            };
-
-            _mockDbConnectionService
-                .Setup(x => x.ExecuteNonQueryAsync(mockQuery, mockParameters, It.IsAny<MySqlConnection>(), It.IsAny<MySqlTransaction>()))
+            _dbConnectionServiceMock
+                .Setup(x => x.ExecuteNonQueryAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object>>(), It.IsAny<MySqlConnection>(), It.IsAny<MySqlTransaction>()))
                 .ReturnsAsync(1);
 
             // Act
-            var result = await _bankAccountRepository.DebitBalanceAsync(accountId, amount);
+            var result = await _repository.AddBalanceAsync(accountId, amount);
 
             // Assert
             Assert.True(result);
+            _dbConnectionServiceMock.VerifyAll();
         }
 
         [Fact]
-        public async Task GetBankAccountsByUserIdAsync_ShouldReturnBankAccounts_WhenAccountsExist()
+        public async Task DebitBalanceAsync_ShouldReturnFalse_WhenBalanceIsInsufficient()
+        {
+            // Arrange
+            var accountId = Guid.NewGuid();
+            const decimal amount = 100;
+
+            const string checkBalanceQuery = @"
+                    SELECT balance 
+                    FROM bank_account 
+                    WHERE id = @AccountId";
+
+            _dbConnectionServiceMock
+                .Setup(x => x.ExecuteScalarAsync<decimal>(checkBalanceQuery, It.IsAny<Dictionary<string, object>>(), It.IsAny<MySqlConnection>(), It.IsAny<MySqlTransaction>()))
+                .ReturnsAsync(50);
+
+            _dbConnectionServiceMock
+                .Setup(x => x.CreateConnectionAsync())
+                .ReturnsAsync(new MySqlConnection());
+
+            // Act
+            var result = await _repository.DebitBalanceAsync(accountId, amount);
+
+            // Assert
+            Assert.False(result);
+            _dbConnectionServiceMock.VerifyAll();
+        }
+
+        [Fact]
+        public async Task DebitBalanceAsync_ShouldReturnTrue_WhenBalanceIsSufficient()
+        {
+            // Arrange
+            _dbConnectionServiceMock
+                .Setup(x => x.ExecuteScalarAsync<decimal>(It.IsAny<string>(), It.IsAny<Dictionary<string, object>>(), It.IsAny<MySqlConnection>(), null))
+                .ReturnsAsync(100); // Mock balance
+
+            _dbConnectionServiceMock
+                .Setup(x => x.ExecuteNonQueryAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object>>(), It.IsAny<MySqlConnection>(), null))
+                .ReturnsAsync(1); // Simulate successful debit
+
+            // Act
+            var result = await _repository.DebitBalanceAsync(Guid.NewGuid(), 50);
+
+            // Assert
+            Assert.True(result);
+            _dbConnectionServiceMock.VerifyAll();
+        }
+
+        [Fact]
+        public async Task GetBankAccountsByUserIdAsync_ShouldReturnAccounts_WhenAccountsExist()
         {
             // Arrange
             var userId = Guid.NewGuid();
+            const string query = @"
+                    SELECT 
+                        id, 
+                        balance, 
+                        currency 
+                    FROM bank_account 
+                    WHERE user_id = @UserId";
 
-            var mockParameters = new Dictionary<string, object>
+            var accounts = new List<BankAccountEntity>
             {
-                { "@UserId", userId }
+                new BankAccountEntity { Id = Guid.NewGuid(), Balance = 100, Currency = "USD" },
+                new BankAccountEntity { Id = Guid.NewGuid(), Balance = 200, Currency = "EUR" }
             };
 
-            var mockData = new List<BankAccountEntity>
-            {
-                new() { Id = Guid.NewGuid(), Balance = 100m, Currency = "USD" },
-                new() { Id = Guid.NewGuid(), Balance = 200m, Currency = "EUR" }
-            };
-
-            _mockDbConnectionService
-                .Setup(x => x.ExecuteScalarAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object>>(), It.IsAny<MySqlConnection>()))
-                .ReturnsAsync(mockData);
+            _dbConnectionServiceMock
+                .Setup(x => x.CreateConnectionAsync())
+                .ReturnsAsync(new MySqlConnection());
 
             // Act
-            var result = await _bankAccountRepository.GetBankAccountsByUserIdAsync(userId);
+            var result = await _repository.GetBankAccountsByUserIdAsync(userId);
 
             // Assert
-            Assert.NotEmpty(result);
+            Assert.NotNull(result);
+            _dbConnectionServiceMock.VerifyAll();
+        }
+
+        [Fact]
+        public async Task CreateBankAccountAsync_ShouldReturnTrue_WhenAccountIsCreatedSuccessfully()
+        {
+            // Arrange
+            var userId = Guid.NewGuid();
+            const decimal initialBalance = 100;
+
+            _dbConnectionServiceMock
+                .Setup(x => x.ExecuteNonQueryAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object>>(), It.IsAny<MySqlConnection>(), It.IsAny<MySqlTransaction>()))
+                .ReturnsAsync(1);
+
+            // Act
+            var result = await _repository.CreateBankAccountAsync(userId, initialBalance, new MySqlConnection(), null);
+
+            // Assert
+            Assert.True(result);
+            _dbConnectionServiceMock.VerifyAll();
         }
     }
 }

@@ -1,7 +1,8 @@
-﻿using ArithmeticCalculatorUserApi.Domain.Models.DTO;
-using ArithmeticCalculatorUserApi.Domain.Services;
-using ArithmeticCalculatorUserApi.Infrastructure.Interfaces.Repositories;
-using ArithmeticCalculatorUserApi.Infrastructure.Models;
+﻿using ArithmeticCalculatorUserApi.Application.DTOs;
+using ArithmeticCalculatorUserApi.Application.Interfaces.Repositories;
+using ArithmeticCalculatorUserApi.Application.Interfaces.Services;
+using ArithmeticCalculatorUserApi.Application.Services;
+using ArithmeticCalculatorUserApi.Domain.Entities;
 using Moq;
 
 namespace ArithmeticCalculatorUserApi.Domain.Tests.Services
@@ -9,12 +10,14 @@ namespace ArithmeticCalculatorUserApi.Domain.Tests.Services
     public class UserServiceTests
     {
         private readonly Mock<IUserRepository> _mockUserRepository;
+        private readonly Mock<ISecurityService> _mockSecurityService;
         private readonly UserService _userService;
 
         public UserServiceTests()
         {
             _mockUserRepository = new Mock<IUserRepository>();
-            _userService = new UserService(_mockUserRepository.Object);
+            _mockSecurityService = new Mock<ISecurityService>();
+            _userService = new UserService(_mockUserRepository.Object, _mockSecurityService.Object);
         }
 
         [Fact]

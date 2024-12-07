@@ -30,7 +30,9 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\src\ArithmeticCalculatorUserApi.Application\ArithmeticCalculatorUserApi.Application.csproj" />
     <ProjectReference Include="..\..\src\ArithmeticCalculatorUserApi.Domain\ArithmeticCalculatorUserApi.Domain.csproj" />
+    <ProjectReference Include="..\..\src\ArithmeticCalculatorUserApi.Infrastructure\ArithmeticCalculatorUserApi.Infrastructure.csproj" />
   </ItemGroup>
 
   <ItemGroup>

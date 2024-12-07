@@ -1,8 +1,8 @@
-﻿using ArithmeticCalculatorUserApi.Domain.Models.DTO;
-using ArithmeticCalculatorUserApi.Domain.Services;
-using ArithmeticCalculatorUserApi.Infrastructure.Models;
-using Moq;
-using ArithmeticCalculatorUserApi.Infrastructure.Interfaces.Repositories;
+﻿using Moq;
+using ArithmeticCalculatorUserApi.Domain.Entities;
+using ArithmeticCalculatorUserApi.Application.Interfaces.Repositories;
+using ArithmeticCalculatorUserApi.Application.Services;
+using ArithmeticCalculatorUserApi.Application.DTOs;
 
 namespace ArithmeticCalculatorUserApi.Domain.Tests.Services
 {

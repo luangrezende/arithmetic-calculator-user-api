@@ -1,4 +1,5 @@
-﻿using ArithmeticCalculatorUserApi.Infrastructure.Models;
+﻿using ArithmeticCalculatorUserApi.Application.DTOs;
+using ArithmeticCalculatorUserApi.Domain.Entities;
 using ArithmeticCalculatorUserApi.Infrastructure.Security;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
@@ -32,7 +33,7 @@ namespace ArithmeticCalculatorUserApi.Domain.Tests.Services
         public void GenerateToken_ShouldGenerateValidJwtToken()
         {
             // Arrange
-            var user = new UserEntity
+            var user = new UserDTO
             {
                 Id = Guid.NewGuid(),
                 Username = "testuser",
@@ -59,7 +60,7 @@ namespace ArithmeticCalculatorUserApi.Domain.Tests.Services
         public void GenerateToken_ShouldUseCorrectSigningCredentials()
         {
             // Arrange
-            var user = new UserEntity
+            var user = new UserDTO
             {
                 Id = Guid.NewGuid(),
                 Username = "testuser",

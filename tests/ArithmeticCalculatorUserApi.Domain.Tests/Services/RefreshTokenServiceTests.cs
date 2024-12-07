@@ -1,6 +1,6 @@
-﻿using ArithmeticCalculatorUserApi.Domain.Services;
-using ArithmeticCalculatorUserApi.Infrastructure.Interfaces.Repositories;
-using ArithmeticCalculatorUserApi.Infrastructure.Models;
+﻿using ArithmeticCalculatorUserApi.Application.Interfaces.Repositories;
+using ArithmeticCalculatorUserApi.Application.Services;
+using ArithmeticCalculatorUserApi.Domain.Entities;
 using Moq;
 
 namespace ArithmeticCalculatorUserApi.Domain.Tests.Services
