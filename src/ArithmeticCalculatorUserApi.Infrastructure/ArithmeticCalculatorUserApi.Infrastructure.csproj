@@ -15,6 +15,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\ArithmeticCalculatorUserApi.Application\ArithmeticCalculatorUserApi.Application.csproj" />
+    <ProjectReference Include="..\ArithmeticCalculatorUserApi.Domain\ArithmeticCalculatorUserApi.Domain.csproj" />
   </ItemGroup>
 
 </Project>

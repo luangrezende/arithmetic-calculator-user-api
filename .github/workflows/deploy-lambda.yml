@@ -48,6 +48,7 @@ jobs:
             echo "Updating Lambda function"
             aws lambda update-function-code \
               --function-name ArithmeticCalculatorUserApi \
+              --handler ArithmeticCalculatorUserApi.Presentation::ArithmeticCalculatorUserApi.Presentation.Function::FunctionHandler \
               --zip-file fileb:///home/runner/work/${{ github.repository }}/src/ArithmeticCalculatorUserApi.Presentation/output/deployment.zip
           else
             echo "Creating Lambda function"
