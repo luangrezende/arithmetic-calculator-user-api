@@ -1,5 +1,6 @@
 ﻿using Amazon.Lambda.APIGatewayEvents;
 using ArithmeticCalculatorUserApi.Application.Helpers;
+using ArithmeticCalculatorUserApi.Application.Models.Response;
 using System.Net;
 using System.Text.Json;
 
@@ -12,7 +13,10 @@ namespace ArithmeticCalculatorUserApi.Presentation.Helpers
            {
                StatusCode = (int)statusCode,
                Headers = CorsHelper.GetCorsHeaders(),
-               Body = JsonSerializer.Serialize(new { Data = body, StatusCode = (int)statusCode })
+               Body = JsonSerializer.Serialize(new ApiResponse { 
+                   Data = body, 
+                   StatusCode = (int)statusCode 
+               })
            };
 
         public static T ParseRequestOrThrow<T>(string requestBody)
