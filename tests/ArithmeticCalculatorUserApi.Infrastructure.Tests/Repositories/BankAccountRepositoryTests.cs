@@ -1,5 +1,5 @@
-﻿using ArithmeticCalculatorUserApi.Domain.Entities;
-using ArithmeticCalculatorUserApi.Infrastructure.Interfaces.Services;
+﻿using ArithmeticCalculatorUserApi.Application.Interfaces.Services;
+using ArithmeticCalculatorUserApi.Domain.Entities;
 using ArithmeticCalculatorUserApi.Infrastructure.Persistence;
 using Moq;
 using MySql.Data.MySqlClient;

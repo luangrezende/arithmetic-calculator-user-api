@@ -71,18 +71,17 @@ The API will now be available at `http://localhost:5000`.
 
 ## Project Structure
 
-```
 ├── src/
-│   ├── ArithmeticCalculatorUserApi.Api/        # Main API project
-│   ├── ArithmeticCalculatorUserApi.Domain/     # Domain logic
-│   ├── ArithmeticCalculatorUserApi.Infrastructure/ # Infrastructure
+│ ├── ArithmeticCalculatorUserApi.Presentation/ # Main API project
+│ ├── ArithmeticCalculatorUserApi.Application/ # Application layer (services, DTOs, use cases)
+│ ├── ArithmeticCalculatorUserApi.Domain/ # Domain logic
+│ ├── ArithmeticCalculatorUserApi.Infrastructure/ # Infrastructure logic
 ├── tests/
-│   ├── ArithmeticCalculatorUserApi.Domain.Tests/ # Unit tests
-├── .github/workflows/    # CI/CD configurations
+│ ├── ArithmeticCalculatorUserApi.Domain.Tests/ # Unit tests
+├── .github/workflows/ # CI/CD workflows
 ├── .gitignore
-├── ArithmeticCalculatorUserApi.sln
+├── ArithmeticCalculatorUserApi.sln # Solution file
 └── README.md
-```
 
 ---
 

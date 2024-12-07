@@ -2,7 +2,6 @@
 using ArithmeticCalculatorUserApi.Application.Interfaces.Services;
 using ArithmeticCalculatorUserApi.Domain.Entities;
 using ArithmeticCalculatorUserApi.Infrastructure.Extensions;
-using ArithmeticCalculatorUserApi.Infrastructure.Interfaces.Services;
 using MySql.Data.MySqlClient;
 using System.Data;
 

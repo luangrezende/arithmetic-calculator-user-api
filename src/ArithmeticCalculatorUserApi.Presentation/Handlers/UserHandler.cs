@@ -8,9 +8,7 @@ using ArithmeticCalculatorUserApi.Application.Models.Request;
 using ArithmeticCalculatorUserApi.Application.Models.Response;
 using ArithmeticCalculatorUserApi.Domain.Enums;
 using ArithmeticCalculatorUserApi.Infrastructure.Enums;
-using ArithmeticCalculatorUserApi.Infrastructure.Interfaces.Services;
 using ArithmeticCalculatorUserApi.Infrastructure.Security;
-using ArithmeticCalculatorUserApi.Presentation.Helpers;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace ArithmeticCalculatorUserApi.Presentation.Handlers;
@@ -41,7 +39,7 @@ public class UserHandler
 
     private async Task<APIGatewayProxyResponse> AddBalance(APIGatewayProxyRequest request)
     {
-        var userId = ValidateTokenOrThrow(request);
+        var userId = ValidateTokenAndReturnUserId(request);
         var addBalanceRequest = ResponseHelper.ParseRequestOrThrow<UpdateBalanceRequest>(request.Body);
 
         if (addBalanceRequest.Amount <= (int)BalanceConfiguration.BalanceMinimumValue
@@ -62,7 +60,7 @@ public class UserHandler
 
     private async Task<APIGatewayProxyResponse> DebitBalance(APIGatewayProxyRequest request)
     {
-        var userId = ValidateTokenOrThrow(request);
+        var userId = ValidateTokenAndReturnUserId(request);
         var debitBalanceRequest = ResponseHelper.ParseRequestOrThrow<UpdateBalanceRequest>(request.Body);
 
         await UpdateBalanceAsync(userId, debitBalanceRequest.AccountId, debitBalanceRequest.Amount, BalanceOperation.Debit);
@@ -129,7 +127,7 @@ public class UserHandler
 
     private async Task<APIGatewayProxyResponse> GetProfile(APIGatewayProxyRequest request)
     {
-        var userId = ValidateTokenOrThrow(request);
+        var userId = ValidateTokenAndReturnUserId(request);
         var userService = _serviceProvider.GetRequiredService<IUserService>();
         var bankAccountService = _serviceProvider.GetRequiredService<IBankAccountService>();
 
@@ -212,7 +210,7 @@ public class UserHandler
         return ResponseHelper.BuildResponse(HttpStatusCode.Created, new { message = ApiErrorMessages.UserCreatedSuccessfully });
     }
 
-    private Guid ValidateTokenOrThrow(APIGatewayProxyRequest request)
+    private Guid ValidateTokenAndReturnUserId(APIGatewayProxyRequest request)
     {
         var jwtTokenValidator = _serviceProvider.GetRequiredService<JwtTokenValidator>();
 
