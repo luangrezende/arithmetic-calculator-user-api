@@ -57,5 +57,6 @@ jobs:
               --runtime dotnet8 \
               --role arn:aws:iam::565393042425:role/ArithmeticCalculatorUserLambdaRole \
               --handler ArithmeticCalculatorUserApi.Presentation::ArithmeticCalculatorUserApi.Presentation.Function::FunctionHandler \
-              --zip-file fileb://${{ github.workspace }}/src/ArithmeticCalculatorUserApi.Presentation/output/deployment.zip \
+              --zip-file fileb://${{ github.workspace }}/src/ArithmeticCalculatorUserApi.Presentation/output/deployment.zip
           fi
+        
