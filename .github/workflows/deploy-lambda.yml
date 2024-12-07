@@ -6,7 +6,7 @@ on:
       - main
 
 env:
-  LAMBDA_FUNCTION_NAME: ArithmeticCalculatorUserApi.Presentation
+  LAMBDA_FUNCTION_NAME: ArithmeticCalculatorUserApi
   AWS_REGION: us-east-1
 
 jobs:
