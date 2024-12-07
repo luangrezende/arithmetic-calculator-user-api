@@ -1,4 +1,4 @@
-﻿namespace ArithmeticCalculatorUserApi.Presentation.Helpers;
+﻿namespace ArithmeticCalculatorUserApi.Application.Helpers;
 
 public static class CorsHelper
 {

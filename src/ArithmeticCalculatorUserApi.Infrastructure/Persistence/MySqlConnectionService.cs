@@ -1,7 +1,7 @@
 ﻿using MySql.Data.MySqlClient;
-using ArithmeticCalculatorUserApi.Infrastructure.Interfaces.Services;
 using System.Data.Common;
 using System.Data;
+using ArithmeticCalculatorUserApi.Application.Interfaces.Services;
 
 namespace ArithmeticCalculatorUserApi.Infrastructure.Persistence
 {
@@ -69,13 +69,13 @@ namespace ArithmeticCalculatorUserApi.Infrastructure.Persistence
             Dictionary<string, object> parameters,
             MySqlConnection connection)
         {
-            var cmd = new MySqlCommand(query, connection); // Removido "using" para manter o comando vivo enquanto o reader estiver aberto.
+            var cmd = new MySqlCommand(query, connection);
             foreach (var param in parameters)
             {
                 cmd.Parameters.AddWithValue(param.Key, param.Value);
             }
 
-            return await cmd.ExecuteReaderAsync(CommandBehavior.CloseConnection); // Fecha a conexão quando o reader for fechado.
+            return await cmd.ExecuteReaderAsync(CommandBehavior.CloseConnection);
         }
     }
 }

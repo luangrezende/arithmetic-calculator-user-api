@@ -2,8 +2,8 @@
 using System.Security.Claims;
 using System.Text;
 using ArithmeticCalculatorUserApi.Application.DTOs;
+using ArithmeticCalculatorUserApi.Application.Interfaces.Services;
 using ArithmeticCalculatorUserApi.Infrastructure.Enums;
-using ArithmeticCalculatorUserApi.Infrastructure.Interfaces.Services;
 using Microsoft.IdentityModel.Tokens;
 
 namespace ArithmeticCalculatorUserApi.Infrastructure.Security

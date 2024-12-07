@@ -1,7 +1,7 @@
 ﻿using MySql.Data.MySqlClient;
 using System.Data.Common;
 
-namespace ArithmeticCalculatorUserApi.Infrastructure.Interfaces.Services
+namespace ArithmeticCalculatorUserApi.Application.Interfaces.Services
 {
     public interface IDbConnectionService
     {

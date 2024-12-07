@@ -8,10 +8,7 @@
 
   <ItemGroup>
     <PackageReference Include="MySql.Data" Version="9.1.0" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="Constants\" />
+    <PackageReference Include="System.Text.Json" Version="9.0.0" />
   </ItemGroup>
 
 </Project>
