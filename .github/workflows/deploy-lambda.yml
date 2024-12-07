@@ -28,17 +28,12 @@ jobs:
         working-directory: src/ArithmeticCalculatorUserApi.Presentation
         run: dotnet restore
 
-      - name: Create Output Directory
+      - name: Create output directory
         run: mkdir -p src/ArithmeticCalculatorUserApi.Presentation/output
 
       - name: Build and Package Lambda
         working-directory: src/ArithmeticCalculatorUserApi.Presentation
-        run: dotnet lambda package \
-          --configuration Release \
-          --output-package /home/runner/work/${{ github.repository }}/src/ArithmeticCalculatorUserApi.Presentation/output/deployment.zip
-
-      - name: Verify ZIP File
-        run: ls -l /home/runner/work/${{ github.repository }}/src/ArithmeticCalculatorUserApi.Presentation/output
+        run: dotnet lambda package --configuration Release --output-package /home/runner/work/${{ github.repository }}/src/ArithmeticCalculatorUserApi.Presentation/output/deployment.zip
 
       - name: Configure AWS CLI
         uses: aws-actions/configure-aws-credentials@v2
