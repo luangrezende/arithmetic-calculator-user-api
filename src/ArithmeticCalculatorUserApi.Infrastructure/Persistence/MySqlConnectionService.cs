@@ -1,5 +1,7 @@
 ﻿using MySql.Data.MySqlClient;
 using ArithmeticCalculatorUserApi.Infrastructure.Interfaces.Services;
+using System.Data.Common;
+using System.Data;
 
 namespace ArithmeticCalculatorUserApi.Infrastructure.Persistence
 {
@@ -60,6 +62,20 @@ namespace ArithmeticCalculatorUserApi.Infrastructure.Persistence
             var result = await cmd.ExecuteScalarAsync();
 
             return result != null && result != DBNull.Value ? (T)Convert.ChangeType(result, typeof(T)) : default;
+        }
+
+        public async Task<DbDataReader> ExecuteReaderAsync(
+            string query,
+            Dictionary<string, object> parameters,
+            MySqlConnection connection)
+        {
+            var cmd = new MySqlCommand(query, connection); // Removido "using" para manter o comando vivo enquanto o reader estiver aberto.
+            foreach (var param in parameters)
+            {
+                cmd.Parameters.AddWithValue(param.Key, param.Value);
+            }
+
+            return await cmd.ExecuteReaderAsync(CommandBehavior.CloseConnection); // Fecha a conexão quando o reader for fechado.
         }
     }
 }

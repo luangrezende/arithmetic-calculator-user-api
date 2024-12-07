@@ -95,6 +95,7 @@ public class Function
 
     private void LogError(ILambdaContext context, string errorType, Exception ex)
     {
-        context.Logger.LogError($"{errorType}: {ex.Message} \nStackTrace: {ex.StackTrace}");
+        var correlationId = Guid.NewGuid();
+        context.Logger.LogError($"[{correlationId}] {errorType}: {ex.Message} \nStackTrace: {ex.StackTrace}");
     }
 }

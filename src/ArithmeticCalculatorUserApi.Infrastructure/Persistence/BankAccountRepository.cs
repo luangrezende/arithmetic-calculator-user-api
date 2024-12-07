@@ -34,6 +34,9 @@ namespace ArithmeticCalculatorUserApi.Infrastructure.Persistence
 
         public async Task<bool> AddBalanceAsync(Guid accountId, decimal amount)
         {
+            if (amount <= 0)
+                throw new ArgumentException("Amount must be greater than zero.");
+
             const string updateQuery = @"
                 UPDATE bank_account
                 SET balance = balance + @Amount,
@@ -47,31 +50,42 @@ namespace ArithmeticCalculatorUserApi.Infrastructure.Persistence
             using var connection = await _dbConnectionService.CreateConnectionAsync();
             using var transaction = await connection.BeginTransactionAsync();
 
-            var result = await _dbConnectionService.ExecuteNonQueryAsync(updateQuery, new Dictionary<string, object>
+            try
             {
-                { "@Amount", amount },
-                { "@AccountId", accountId }
-            }, connection, transaction);
+                var result = await _dbConnectionService.ExecuteNonQueryAsync(updateQuery, new Dictionary<string, object>
+                {
+                    { "@Amount", amount },
+                    { "@AccountId", accountId }
+                }, connection, transaction);
 
-            if (result == 0)
+                if (result == 0)
+                {
+                    await transaction.RollbackAsync();
+                    return false;
+                }
+
+                await _dbConnectionService.ExecuteNonQueryAsync(insertRecordQuery, new Dictionary<string, object>
+                {
+                    { "@Id", Guid.NewGuid() },
+                    { "@Amount", amount },
+                    { "@AccountId", accountId }
+                }, connection, transaction);
+
+                await transaction.CommitAsync();
+                return true;
+            }
+            catch
             {
                 await transaction.RollbackAsync();
-                return false;
+                throw;
             }
-
-            await _dbConnectionService.ExecuteNonQueryAsync(insertRecordQuery, new Dictionary<string, object>
-            {
-                { "@Id", Guid.NewGuid() },
-                { "@Amount", amount },
-                { "@AccountId", accountId }
-            }, connection, transaction);
-
-            await transaction.CommitAsync();
-            return true;
         }
 
         public async Task<bool> DebitBalanceAsync(Guid accountId, decimal amount)
         {
+            if (amount <= 0)
+                throw new ArgumentException("Amount must be greater than zero.");
+
             const string checkBalanceQuery = @"
                 SELECT balance 
                 FROM bank_account 
@@ -90,38 +104,46 @@ namespace ArithmeticCalculatorUserApi.Infrastructure.Persistence
             using var connection = await _dbConnectionService.CreateConnectionAsync();
             using var transaction = await connection.BeginTransactionAsync();
 
-            var balance = await _dbConnectionService.ExecuteScalarAsync<decimal>(checkBalanceQuery, new Dictionary<string, object>
+            try
             {
-                { "@AccountId", accountId }
-            }, connection, transaction);
+                var balance = await _dbConnectionService.ExecuteScalarAsync<decimal>(checkBalanceQuery, new Dictionary<string, object>
+                {
+                    { "@AccountId", accountId }
+                }, connection, transaction);
 
-            if (balance < amount)
+                if (balance < amount)
+                {
+                    await transaction.RollbackAsync();
+                    return false;
+                }
+
+                var result = await _dbConnectionService.ExecuteNonQueryAsync(updateQuery, new Dictionary<string, object>
+                {
+                    { "@Amount", amount },
+                    { "@AccountId", accountId }
+                }, connection, transaction);
+
+                if (result == 0)
+                {
+                    await transaction.RollbackAsync();
+                    return false;
+                }
+
+                await _dbConnectionService.ExecuteNonQueryAsync(insertRecordQuery, new Dictionary<string, object>
+                {
+                    { "@Id", Guid.NewGuid() },
+                    { "@Amount", amount },
+                    { "@AccountId", accountId }
+                }, connection, transaction);
+
+                await transaction.CommitAsync();
+                return true;
+            }
+            catch
             {
                 await transaction.RollbackAsync();
-                return false;
+                throw;
             }
-
-            var result = await _dbConnectionService.ExecuteNonQueryAsync(updateQuery, new Dictionary<string, object>
-            {
-                { "@Amount", amount },
-                { "@AccountId", accountId }
-            }, connection, transaction);
-
-            if (result == 0)
-            {
-                await transaction.RollbackAsync();
-                return false;
-            }
-
-            await _dbConnectionService.ExecuteNonQueryAsync(insertRecordQuery, new Dictionary<string, object>
-            {
-                { "@Id", Guid.NewGuid() },
-                { "@Amount", amount },
-                { "@AccountId", accountId }
-            }, connection, transaction);
-
-            await transaction.CommitAsync();
-            return true;
         }
 
         public async Task<IEnumerable<BankAccountEntity>> GetBankAccountsByUserIdAsync(Guid userId)
@@ -134,11 +156,14 @@ namespace ArithmeticCalculatorUserApi.Infrastructure.Persistence
                 FROM bank_account 
                 WHERE user_id = @UserId";
 
-            using var connection = await _dbConnectionService.CreateConnectionAsync();
-            using var cmd = new MySqlCommand(query, connection);
-            cmd.Parameters.AddWithValue("@UserId", userId);
+            var parameters = new Dictionary<string, object>
+            {
+                { "@UserId", userId }
+            };
 
-            using var reader = await cmd.ExecuteReaderAsync();
+            using var connection = await _dbConnectionService.CreateConnectionAsync();
+            using var reader = await _dbConnectionService.ExecuteReaderAsync(query, parameters, connection);
+
             var accounts = new List<BankAccountEntity>();
 
             while (await reader.ReadAsync())
@@ -156,9 +181,12 @@ namespace ArithmeticCalculatorUserApi.Infrastructure.Persistence
 
         public async Task<bool> CreateBankAccountAsync(Guid userId, decimal initialBalance, MySqlConnection connection, MySqlTransaction transaction)
         {
+            if (initialBalance < 0)
+                throw new ArgumentException("Initial balance cannot be negative.");
+
             const string query = @"
-                INSERT INTO bank_account (id, user_id, balance) 
-                VALUES (@Id, @UserId, @Balance)";
+                INSERT INTO bank_account (id, user_id, balance, created_at, updated_at) 
+                VALUES (@Id, @UserId, @Balance, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)";
 
             var parameters = new Dictionary<string, object>
             {

@@ -5,6 +5,10 @@ on:
     branches:
       - main
 
+env:
+  LAMBDA_FUNCTION_NAME: ArithmeticCalculatorUserApi.Presentation
+  AWS_REGION: us-east-1
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -28,33 +32,31 @@ jobs:
         working-directory: src/ArithmeticCalculatorUserApi.Presentation
         run: dotnet restore
 
-      - name: Create output directory
-        run: mkdir -p src/ArithmeticCalculatorUserApi.Presentation/output
-
       - name: Build and Package Lambda
         working-directory: src/ArithmeticCalculatorUserApi.Presentation
-        run: dotnet lambda package --configuration Release --output-package /home/runner/work/${{ github.repository }}/src/ArithmeticCalculatorUserApi.Presentation/output/deployment.zip
+        run: dotnet lambda package --configuration Release --output-package ${{ github.workspace }}/src/ArithmeticCalculatorUserApi.Presentation/output/deployment.zip
 
       - name: Configure AWS CLI
         uses: aws-actions/configure-aws-credentials@v2
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: us-east-1
+          aws-region: ${{ env.AWS_REGION }}
 
       - name: Deploy Lambda Function
         run: |
-          if aws lambda get-function --function-name ArithmeticCalculatorUserApi.Presentation; then
+          if aws lambda get-function --function-name ${{ env.LAMBDA_FUNCTION_NAME }} > /dev/null 2>&1; then
             echo "Updating Lambda function"
             aws lambda update-function-code \
-              --function-name ArithmeticCalculatorUserApi.Presentation \
-              --zip-file fileb:///home/runner/work/${{ github.repository }}/src/ArithmeticCalculatorUserApi.Presentation/output/deployment.zip
+              --function-name ${{ env.LAMBDA_FUNCTION_NAME }} \
+              --zip-file fileb://${{ github.workspace }}/src/ArithmeticCalculatorUserApi.Presentation/output/deployment.zip
           else
             echo "Creating Lambda function"
             aws lambda create-function \
-              --function-name ArithmeticCalculatorUserApi.Presentation \
+              --function-name ${{ env.LAMBDA_FUNCTION_NAME }} \
               --runtime dotnet8 \
-              --role arn:aws:iam::565393042425:role/ArithmeticCalculatorUserLambdaRole\
+              --role arn:aws:iam::565393042425:role/ArithmeticCalculatorUserLambdaRole \
               --handler ArithmeticCalculatorUserApi.Presentation::ArithmeticCalculatorUserApi.Presentation.Function::FunctionHandler \
-              --zip-file fileb:///home/runner/work/${{ github.repository }}/src/ArithmeticCalculatorUserApi.Presentation/output/deployment.zip
+              --zip-file fileb://${{ github.workspace }}/src/ArithmeticCalculatorUserApi.Presentation/output/deployment.zip \
+              --environment Variables="{MYSQL_CONNECTION_STRING=${{ secrets.MYSQL_CONNECTION_STRING }},JWT_SECRET_KEY=${{ secrets.JWT_SECRET_KEY }}"
           fi

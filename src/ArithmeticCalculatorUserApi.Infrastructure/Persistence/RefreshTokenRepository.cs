@@ -1,7 +1,6 @@
 ﻿using ArithmeticCalculatorUserApi.Application.Interfaces.Repositories;
 using ArithmeticCalculatorUserApi.Domain.Entities;
 using ArithmeticCalculatorUserApi.Infrastructure.Interfaces.Services;
-using MySql.Data.MySqlClient;
 using System.Data;
 
 namespace ArithmeticCalculatorUserApi.Infrastructure.Persistence
@@ -17,40 +16,49 @@ namespace ArithmeticCalculatorUserApi.Infrastructure.Persistence
 
         public async Task<RefreshTokenEntity> AddAsync(RefreshTokenEntity refreshToken)
         {
+            if (refreshToken == null)
+                throw new ArgumentNullException(nameof(refreshToken));
+
             const string query = @"
                 INSERT INTO refresh_tokens (token, user_id, expires_at, created_at, is_revoked)
                 VALUES (@Token, @UserId, @ExpiresAt, @CreatedAt, @IsRevoked)";
 
+            var parameters = new Dictionary<string, object>
+            {
+                { "@Token", refreshToken.Token },
+                { "@UserId", refreshToken.UserId },
+                { "@ExpiresAt", refreshToken.ExpiresAt },
+                { "@CreatedAt", refreshToken.CreatedAt },
+                { "@IsRevoked", refreshToken.IsRevoked }
+            };
+
             using var connection = await _dbConnectionService.CreateConnectionAsync();
-            using var cmd = new MySqlCommand(query, connection);
-
-            cmd.Parameters.AddWithValue("@Token", refreshToken.Token);
-            cmd.Parameters.AddWithValue("@UserId", refreshToken.UserId);
-            cmd.Parameters.AddWithValue("@ExpiresAt", refreshToken.ExpiresAt);
-            cmd.Parameters.AddWithValue("@CreatedAt", refreshToken.CreatedAt);
-            cmd.Parameters.AddWithValue("@IsRevoked", refreshToken.IsRevoked);
-
-            var rowsAffected = await cmd.ExecuteNonQueryAsync();
+            var rowsAffected = await _dbConnectionService.ExecuteNonQueryAsync(query, parameters, connection);
 
             if (rowsAffected > 0)
                 return refreshToken;
 
-            throw new InvalidOperationException("error");
+            throw new InvalidOperationException("Failed to add refresh token.");
         }
 
         public async Task<RefreshTokenEntity?> GetByTokenAsync(string token)
         {
+            if (string.IsNullOrWhiteSpace(token))
+                throw new ArgumentException("Token cannot be null or empty.", nameof(token));
+
             const string query = @"
                 SELECT token, user_id, expires_at, created_at, is_revoked 
                 FROM refresh_tokens
                 WHERE token = @Token AND is_revoked = 0";
 
+            var parameters = new Dictionary<string, object>
+            {
+                { "@Token", token }
+            };
+
             using var connection = await _dbConnectionService.CreateConnectionAsync();
-            using var cmd = new MySqlCommand(query, connection);
+            using var reader = await _dbConnectionService.ExecuteReaderAsync(query, parameters, connection);
 
-            cmd.Parameters.AddWithValue("@Token", token);
-
-            using var reader = await cmd.ExecuteReaderAsync();
             if (await reader.ReadAsync())
             {
                 return new RefreshTokenEntity
@@ -68,20 +76,26 @@ namespace ArithmeticCalculatorUserApi.Infrastructure.Persistence
 
         public async Task<bool> InvalidateTokenAsync(string token)
         {
+            if (string.IsNullOrWhiteSpace(token))
+                throw new ArgumentException("Token cannot be null or empty.", nameof(token));
+
             const string query = @"
                 UPDATE refresh_tokens
                 SET is_revoked = 1, 
                     revoked_at = @RevokedAt
                 WHERE token = @Token";
 
+            var parameters = new Dictionary<string, object>
+            {
+                { "@RevokedAt", DateTime.UtcNow },
+                { "@Token", token }
+            };
+
             using var connection = await _dbConnectionService.CreateConnectionAsync();
-            using var cmd = new MySqlCommand(query, connection);
+            var rowsAffected = await _dbConnectionService.ExecuteNonQueryAsync(query, parameters, connection);
 
-            cmd.Parameters.AddWithValue("@RevokedAt", DateTime.UtcNow);
-            cmd.Parameters.AddWithValue("@Token", token);
-
-            var rowsAffected = await cmd.ExecuteNonQueryAsync();
             return rowsAffected > 0;
         }
     }
+
 }
