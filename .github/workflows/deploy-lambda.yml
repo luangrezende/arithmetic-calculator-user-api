@@ -58,5 +58,4 @@ jobs:
               --role arn:aws:iam::565393042425:role/ArithmeticCalculatorUserLambdaRole \
               --handler ArithmeticCalculatorUserApi.Presentation::ArithmeticCalculatorUserApi.Presentation.Function::FunctionHandler \
               --zip-file fileb://${{ github.workspace }}/src/ArithmeticCalculatorUserApi.Presentation/output/deployment.zip \
-              --environment Variables="{MYSQL_CONNECTION_STRING=${{ secrets.MYSQL_CONNECTION_STRING }},JWT_SECRET_KEY=${{ secrets.JWT_SECRET_KEY }}"
           fi
