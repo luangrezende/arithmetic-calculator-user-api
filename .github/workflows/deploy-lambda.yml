@@ -33,7 +33,7 @@ jobs:
         run: dotnet restore
 
       - name: Create Output Directory
-        run: mkdir -p ${{ github.workspace }}/src/ArithmeticCalculatorUserApi.Presentation/output
+        run: mkdir -p src/ArithmeticCalculatorUserApi.Presentation/output
 
       - name: Build and Package Lambda
         working-directory: src/ArithmeticCalculatorUserApi.Presentation
@@ -57,7 +57,7 @@ jobs:
             echo "Updating Lambda function"
             aws lambda update-function-code \
               --function-name ${{ env.LAMBDA_FUNCTION_NAME }} \
-              --zip-file fileb://src/ArithmeticCalculatorUserApi.Presentation/output/deployment.zip
+              --zip-file fileb://${{ github.workspace }}/src/ArithmeticCalculatorUserApi.Presentation/output/deployment.zip
           else
             echo "Creating Lambda function"
             aws lambda create-function \
@@ -65,6 +65,5 @@ jobs:
               --runtime dotnet8 \
               --role arn:aws:iam::565393042425:role/ArithmeticCalculatorUserLambdaRole \
               --handler ArithmeticCalculatorUserApi.Presentation::ArithmeticCalculatorUserApi.Presentation.Function::FunctionHandler \
-              --zip-file fileb://src/ArithmeticCalculatorUserApi.Presentation/output/deployment.zip
+              --zip-file fileb://${{ github.workspace }}/src/ArithmeticCalculatorUserApi.Presentation/output/deployment.zip
           fi
-        
