@@ -44,11 +44,14 @@ jobs:
 
       - name: Deploy Lambda Function
         run: |
-          if aws lambda get-function --function-name ArithmeticCalculatorUserApi; then
-            echo "Updating Lambda function"
+          if aws lambda get-function --function-name ArithmeticCalculatorUserApi > /dev/null 2>&1; then
+            echo "Updating Lambda function handler and configuration"
+            aws lambda update-function-configuration \
+              --function-name ArithmeticCalculatorUserApi \
+              --handler ArithmeticCalculatorUserApi.Presentation::ArithmeticCalculatorUserApi.Presentation.Function::FunctionHandler
+            echo "Updating Lambda function code"
             aws lambda update-function-code \
               --function-name ArithmeticCalculatorUserApi \
-              --handler ArithmeticCalculatorUserApi.Presentation::ArithmeticCalculatorUserApi.Presentation.Function::FunctionHandler \
               --zip-file fileb:///home/runner/work/${{ github.repository }}/src/ArithmeticCalculatorUserApi.Presentation/output/deployment.zip
           else
             echo "Creating Lambda function"
