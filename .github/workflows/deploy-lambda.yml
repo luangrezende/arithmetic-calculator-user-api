@@ -34,8 +34,10 @@ jobs:
 
       - name: Build and Package Lambda
         working-directory: src/ArithmeticCalculatorUserApi.Presentation
-        run: dotnet lambda package --configuration Release --output-package ${{ github.workspace }}/src/ArithmeticCalculatorUserApi.Presentation/output/deployment.zip
-
+        run: dotnet lambda package \
+          --configuration Release \
+          --output-package ${{ github.workspace }}/src/ArithmeticCalculatorUserApi.Presentation/output/deployment.zip
+      
       - name: Configure AWS CLI
         uses: aws-actions/configure-aws-credentials@v2
         with:
