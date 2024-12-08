@@ -49,7 +49,7 @@ public class Function
         return ex switch
         {
             HttpResponseException httpEx => ResponseHelper.BuildResponse(httpEx.StatusCode, new { error = httpEx.Message ?? ApiErrorMessages.GenericError }),
-            SecurityTokenException => ResponseHelper.BuildResponse(HttpStatusCode.BadRequest, new { error = ApiErrorMessages.InvalidToken }),
+            SecurityTokenException => ResponseHelper.BuildResponse(HttpStatusCode.Unauthorized, new { error = ApiErrorMessages.InvalidToken }),
             SecurityTokenMalformedException => ResponseHelper.BuildResponse(HttpStatusCode.BadRequest, new { error = ApiErrorMessages.InvalidToken }),
             Exception => ResponseHelper.BuildResponse(HttpStatusCode.InternalServerError, new { error = ApiErrorMessages.InternalServerError }),
         };
