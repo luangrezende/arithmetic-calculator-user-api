@@ -131,7 +131,8 @@ public class UserHandler
         var userService = _serviceProvider.GetRequiredService<IUserService>();
         var bankAccountService = _serviceProvider.GetRequiredService<IBankAccountService>();
 
-        var user = await userService.GetUserByIdAsync(userId) ?? throw new HttpResponseException(HttpStatusCode.NotFound, ApiErrorMessages.UserNotFound);
+        var user = await userService.GetUserByIdAsync(userId) 
+            ?? throw new HttpResponseException(HttpStatusCode.NotFound, ApiErrorMessages.UserNotFound);
         var accounts = await bankAccountService.GetBankAccountsByUserIdAsync(userId);
 
         return ResponseHelper.BuildResponse(HttpStatusCode.OK, new UserProfileResponse
@@ -187,7 +188,7 @@ public class UserHandler
         var isRevoked = await refreshTokenService.InvalidateTokenAsync(logoutRequest.RefreshToken);
 
         if (!isRevoked)
-            throw new HttpResponseException(HttpStatusCode.BadRequest, ApiErrorMessages.InvalidToken);
+            throw new HttpResponseException(HttpStatusCode.Unauthorized, ApiErrorMessages.InvalidToken);
 
         return ResponseHelper.BuildResponse(HttpStatusCode.OK, new { message = ApiErrorMessages.LogoutSuccessful });
     }
