@@ -1,9 +1,10 @@
 name: Deploy to AWS Lambda
 
 on:
-  push:
-    branches:
-      - master
+  # push:
+  #   branches:
+  #     - master
+  workflow_dispatch:
 
 env:
   AWS_REGION: us-east-1
@@ -70,6 +71,10 @@ jobs:
           aws lambda update-function-code \
             --function-name ArithmeticCalculatorUserApi \
             --zip-file fileb://src/ArithmeticCalculatorUserApi.Presentation/deployment-package.zip
+          
+          echo "Waiting for function update to complete..."
+          aws lambda wait function-updated \
+            --function-name ArithmeticCalculatorUserApi
           
           echo "Updating Lambda function configuration"
           aws lambda update-function-configuration \
