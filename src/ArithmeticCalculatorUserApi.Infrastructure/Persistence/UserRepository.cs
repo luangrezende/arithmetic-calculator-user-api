@@ -36,7 +36,7 @@ namespace ArithmeticCalculatorUserApi.Infrastructure.Persistence
                 var hashedPassword = _securityService.HashPassword(password);
 
                 const string userQuery = @"
-                    INSERT INTO user (id, username, password, name, user_status_id) 
+                    INSERT INTO calc_user (id, username, password, name, user_status_id) 
                     VALUES (@Id, @Username, @Password, @Name, 1)";
 
                 var userInserted = await _dbConnectionService.ExecuteNonQueryAsync(userQuery, new Dictionary<string, object>
@@ -68,7 +68,7 @@ namespace ArithmeticCalculatorUserApi.Infrastructure.Persistence
         {
             const string query = @"
                 SELECT u.id, u.username, u.name, us.description AS status 
-                FROM user u
+                FROM calc_user u
                 INNER JOIN user_status us ON u.user_status_id = us.id
                 WHERE u.id = @UserId";
 
@@ -82,7 +82,7 @@ namespace ArithmeticCalculatorUserApi.Infrastructure.Persistence
         {
             const string query = @"
                 SELECT u.id, u.username, u.password, u.name, us.description AS status 
-                FROM user u
+                FROM calc_user u
                 INNER JOIN user_status us ON u.user_status_id = us.id
                 WHERE u.username = @Username";
 
