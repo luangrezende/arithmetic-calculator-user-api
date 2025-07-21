@@ -45,8 +45,8 @@ namespace ArithmeticCalculatorUserApi.Domain.Tests.Services
                     Name = "Test User"
                 });
 
-            _mockUserRepository.Setup(repo => repo.CreateUserAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
-                .ReturnsAsync(true);
+            _mockSecurityService.Setup(service => service.VerifyPassword(password, hashedPassword))
+                .Returns(true);
 
             // Act
             var result = await _userService.AuthenticateAsync(username, password);
@@ -185,6 +185,104 @@ namespace ArithmeticCalculatorUserApi.Domain.Tests.Services
 
             // Act
             var result = await _userService.GetUserByUsernameAsync(username);
+
+            // Assert
+            Assert.Null(result);
+        }
+
+        [Fact]
+        public async Task AuthenticateAsync_ShouldReturnNull_WhenUserNotFound()
+        {
+            // Arrange
+            var username = "nonexistentuser";
+            var password = "password123";
+
+            _mockUserRepository.Setup(repo => repo.GetUserByUsernameAsync(username))
+                .ReturnsAsync((UserEntity?)null);
+
+            // Act
+            var result = await _userService.AuthenticateAsync(username, password);
+
+            // Assert
+            Assert.Null(result);
+        }
+
+        [Fact]
+        public async Task AuthenticateAsync_ShouldReturnNull_WhenPasswordIsInvalid()
+        {
+            // Arrange
+            var username = "testuser";
+            var password = "wrongpassword";
+            var correctPassword = "correctpassword";
+            var hashedPassword = BCrypt.Net.BCrypt.HashPassword(correctPassword);
+
+            var userEntity = new UserEntity
+            {
+                Id = Guid.NewGuid(),
+                Username = username,
+                Password = hashedPassword,
+                Status = "active",
+                Name = "Test User"
+            };
+
+            _mockUserRepository.Setup(repo => repo.GetUserByUsernameAsync(username))
+                .ReturnsAsync(userEntity);
+            _mockSecurityService.Setup(service => service.VerifyPassword(password, hashedPassword))
+                .Returns(false);
+
+            // Act
+            var result = await _userService.AuthenticateAsync(username, password);
+
+            // Assert
+            Assert.Null(result);
+        }
+
+        [Fact]
+        public async Task CreateUserAsync_ShouldReturnFalse_WhenRepositoryFails()
+        {
+            // Arrange
+            var username = "testuser";
+            var password = "password123";
+            var name = "Test User";
+
+            _mockUserRepository.Setup(repo => repo.CreateUserAsync(username, password, name))
+                .ReturnsAsync(false);
+
+            // Act
+            var result = await _userService.CreateUserAsync(username, password, name);
+
+            // Assert
+            Assert.False(result);
+        }
+
+        [Theory]
+        [InlineData("")]
+        [InlineData(" ")]
+        [InlineData(null)]
+        public async Task GetUserByUsernameAsync_ShouldReturnNull_WhenUsernameIsInvalid(string? username)
+        {
+            // Arrange
+            _mockUserRepository.Setup(repo => repo.GetUserByUsernameAsync(It.IsAny<string>()))
+                .ReturnsAsync((UserEntity?)null);
+
+            // Act
+            var result = await _userService.GetUserByUsernameAsync(username!);
+
+            // Assert
+            Assert.Null(result);
+        }
+
+        [Fact]
+        public async Task GetUserByIdAsync_ShouldReturnNull_WhenUserIdNotFound()
+        {
+            // Arrange
+            var userId = Guid.NewGuid();
+
+            _mockUserRepository.Setup(repo => repo.GetUserByIdAsync(userId))
+                .ReturnsAsync((UserEntity?)null);
+
+            // Act
+            var result = await _userService.GetUserByIdAsync(userId);
 
             // Assert
             Assert.Null(result);

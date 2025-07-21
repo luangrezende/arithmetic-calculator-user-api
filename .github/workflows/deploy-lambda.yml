@@ -37,8 +37,27 @@ jobs:
         aws-region: ${{ env.AWS_REGION }}
 
     - name: Restore dependencies
-      working-directory: src/ArithmeticCalculatorUserApi.Presentation
       run: dotnet restore
+
+    - name: Build solution
+      run: dotnet build --configuration Release --no-restore
+
+    - name: Run Unit Tests
+      env:
+        PROMOTIONAL_AMOUNT: "100"
+        JWT_SECRET_KEY: "test-secret-key-for-unit-tests-only"
+        MYSQL_CONNECTION_STRING: "Server=localhost;Database=test;User=test;Password=test;"
+      run: |
+        echo "Running unit tests..."
+        dotnet test --configuration Release --no-build --verbosity normal --logger trx --results-directory ./test-results
+        echo "All tests passed successfully!"
+
+    - name: Upload Test Results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: test-results
+        path: ./test-results/*.trx
 
     - name: Build and Package Lambda
       working-directory: src/ArithmeticCalculatorUserApi.Presentation
@@ -63,7 +82,7 @@ jobs:
           aws lambda create-function \
             --function-name ArithmeticCalculatorUserApi \
             --runtime dotnet8 \
-            --role ${{ secrets.LAMBDA_EXECUTION_ROLE_ARN }} \
+            --role "${{ secrets.LAMBDA_EXECUTION_ROLE_ARN }}" \
             --handler ArithmeticCalculatorUserApi.Presentation::ArithmeticCalculatorUserApi.Presentation.Function::FunctionHandler \
             --zip-file fileb://src/ArithmeticCalculatorUserApi.Presentation/deployment-package.zip \
             --timeout 60 \
