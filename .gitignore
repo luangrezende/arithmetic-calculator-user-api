@@ -69,3 +69,6 @@ terraform.tfstate.backup
 *.swp
 *.tmp
 *.tmp/*
+
+# Others
+openapi.yaml

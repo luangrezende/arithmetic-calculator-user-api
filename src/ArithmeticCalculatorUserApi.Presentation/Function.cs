@@ -22,6 +22,8 @@ public class Function
 
     public Function()
     {
+        Logger.Initialize();
+        
         var serviceCollection = new ServiceCollection();
         ConfigureServices(serviceCollection);
         _serviceProvider = serviceCollection.BuildServiceProvider();
@@ -31,20 +33,24 @@ public class Function
     {
         var handler = new UserHandler(_serviceProvider);
 
+        Logger.LogInformation("Processing request: {Method} {Path}", request.HttpMethod, request.Path);
+
         try
         {
-            return await handler.HandleRequest(request);
+            var response = await handler.HandleRequest(request);
+            Logger.LogInformation("Request completed: {StatusCode}", response.StatusCode);
+            return response;
         }
         catch (Exception ex)
         {
-            LogError(context, "Unhandled Exception", ex);
+            Logger.LogError(ex, "Unhandled exception processing request: {Method} {Path}", request.HttpMethod, request.Path);
             return HandleException(ex, context);
         }
     }
 
     private APIGatewayProxyResponse HandleException(Exception ex, ILambdaContext context)
     {
-        LogError(context, ex.GetType().Name, ex);
+        Logger.LogError(ex, "Exception handled: {ExceptionType}", ex.GetType().Name);
 
         return ex switch
         {
@@ -75,11 +81,5 @@ public class Function
         });
 
         services.AddScoped(sp => new JwtTokenValidator(Environment.GetEnvironmentVariable("JWT_SECRET_KEY")!));
-    }
-
-    private void LogError(ILambdaContext context, string errorType, Exception ex)
-    {
-        var correlationId = Guid.NewGuid();
-        context.Logger.LogError($"[{correlationId}] {errorType}: {ex.Message} \nStackTrace: {ex.StackTrace}");
     }
 }
