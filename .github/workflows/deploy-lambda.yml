@@ -1,64 +1,72 @@
-name: Deploy Lambda to AWS
+name: Deploy to AWS Lambda
 
 on:
   push:
     branches:
       - main
 
+env:
+  AWS_REGION: us-east-1
+  DOTNET_VERSION: '8.0'
+
 jobs:
   deploy:
+    name: Build and Deploy to Lambda
     runs-on: ubuntu-latest
-
+    
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v3
+    - name: Checkout code
+      uses: actions/checkout@v4
 
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v3
-        with:
-          dotnet-version: 8.0
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
 
-      - name: Install Amazon Lambda Tools
-        run: dotnet tool install -g Amazon.Lambda.Tools
+    - name: Install AWS Lambda Tools
+      run: dotnet tool install -g Amazon.Lambda.Tools
 
-      - name: Add .NET Tools to PATH
-        run: echo "${HOME}/.dotnet/tools" >> $GITHUB_PATH
+    - name: Add .NET Tools to PATH
+      run: echo "${HOME}/.dotnet/tools" >> $GITHUB_PATH
 
-      - name: Install Dependencies
-        working-directory: src/ArithmeticCalculatorUserApi.Presentation
-        run: dotnet restore
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.AWS_REGION }}
 
-      - name: Create output directory
-        run: mkdir -p src/ArithmeticCalculatorUserApi.Presentation/output
+    - name: Restore dependencies
+      working-directory: src/ArithmeticCalculatorUserApi.Presentation
+      run: dotnet restore
 
-      - name: Build and Package Lambda
-        working-directory: src/ArithmeticCalculatorUserApi.Presentation
-        run: dotnet lambda package --configuration Release --output-package /home/runner/work/${{ github.repository }}/src/ArithmeticCalculatorUserApi.Presentation/output/deployment.zip
+    - name: Build and Package Lambda
+      working-directory: src/ArithmeticCalculatorUserApi.Presentation
+      run: dotnet lambda package --configuration Release --output-package deployment-package.zip
 
-      - name: Configure AWS CLI
-        uses: aws-actions/configure-aws-credentials@v2
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: us-east-1
-
-      - name: Deploy Lambda Function
-        run: |
-          if aws lambda get-function --function-name ArithmeticCalculatorUserApi > /dev/null 2>&1; then
-            echo "Updating Lambda function handler and configuration"
-            aws lambda update-function-configuration \
-              --function-name ArithmeticCalculatorUserApi \
-              --handler ArithmeticCalculatorUserApi.Presentation::ArithmeticCalculatorUserApi.Presentation.Function::FunctionHandler
-            echo "Updating Lambda function code"
-            aws lambda update-function-code \
-              --function-name ArithmeticCalculatorUserApi \
-              --zip-file fileb:///home/runner/work/${{ github.repository }}/src/ArithmeticCalculatorUserApi.Presentation/output/deployment.zip
-          else
-            echo "Creating Lambda function"
-            aws lambda create-function \
-              --function-name ArithmeticCalculatorUserApi \
-              --runtime dotnet8 \
-              --role arn:aws:iam::565393042425:role/ArithmeticCalculatorUserLambdaRole \
-              --handler ArithmeticCalculatorUserApi.Presentation::ArithmeticCalculatorUserApi.Presentation.Function::FunctionHandler \
-              --zip-file fileb:///home/runner/work/${{ github.repository }}/src/ArithmeticCalculatorUserApi.Presentation/output/deployment.zip
-          fi
+    - name: Deploy to Lambda
+      run: |
+        if aws lambda get-function --function-name ArithmeticCalculatorUserApi > /dev/null 2>&1; then
+          echo "Updating Lambda function code"
+          aws lambda update-function-code \
+            --function-name ArithmeticCalculatorUserApi \
+            --zip-file fileb://src/ArithmeticCalculatorUserApi.Presentation/deployment-package.zip
+          
+          echo "Updating Lambda function configuration"
+          aws lambda update-function-configuration \
+            --function-name ArithmeticCalculatorUserApi \
+            --timeout 60 \
+            --memory-size 1024 \
+            --environment Variables="{MYSQL_CONNECTION_STRING=${{ secrets.MYSQL_CONNECTION_STRING }},JWT_SECRET_KEY=${{ secrets.JWT_SECRET_KEY }}}"
+        else
+          echo "Creating Lambda function"
+          aws lambda create-function \
+            --function-name ArithmeticCalculatorUserApi \
+            --runtime dotnet8 \
+            --role ${{ secrets.LAMBDA_EXECUTION_ROLE_ARN }} \
+            --handler ArithmeticCalculatorUserApi.Presentation::ArithmeticCalculatorUserApi.Presentation.Function::FunctionHandler \
+            --zip-file fileb://src/ArithmeticCalculatorUserApi.Presentation/deployment-package.zip \
+            --timeout 60 \
+            --memory-size 1024 \
+            --environment Variables="{MYSQL_CONNECTION_STRING=${{ secrets.MYSQL_CONNECTION_STRING }},JWT_SECRET_KEY=${{ secrets.JWT_SECRET_KEY }}}"
+        fi

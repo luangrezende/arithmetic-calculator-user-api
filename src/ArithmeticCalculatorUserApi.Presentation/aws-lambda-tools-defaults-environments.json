@@ -1,0 +1,34 @@
+{
+  "development": {
+    "profile": "default",
+    "region": "us-east-1",
+    "configuration": "Release",
+    "framework": "net8.0",
+    "function-runtime": "dotnet8",
+    "function-memory-size": 512,
+    "function-timeout": 30,
+    "function-handler": "ArithmeticCalculatorUserApi.Presentation::ArithmeticCalculatorUserApi.Presentation.Function::FunctionHandler",
+    "function-name": "ArithmeticCalculatorUserApi-dev",
+    "function-description": "Development Lambda function for Arithmetic Calculator User API",
+    "package-type": "Zip",
+    "environment-variables": {
+      "ASPNETCORE_ENVIRONMENT": "Development"
+    }
+  },
+  "production": {
+    "profile": "default",
+    "region": "us-east-1",
+    "configuration": "Release",
+    "framework": "net8.0",
+    "function-runtime": "dotnet8",
+    "function-memory-size": 1024,
+    "function-timeout": 60,
+    "function-handler": "ArithmeticCalculatorUserApi.Presentation::ArithmeticCalculatorUserApi.Presentation.Function::FunctionHandler",
+    "function-name": "ArithmeticCalculatorUserApi-prod",
+    "function-description": "Production Lambda function for Arithmetic Calculator User API",
+    "package-type": "Zip",
+    "environment-variables": {
+      "ASPNETCORE_ENVIRONMENT": "Production"
+    }
+  }
+}
