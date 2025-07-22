@@ -1,125 +1,179 @@
-# Arithmetic Calculator User API
+# Arithmetic Calculator User API v1.0.0
 
-This API manages user-related operations for the Arithmetic Calculator platform, developed using AWS Lambda and .NET 8.
+![.NET 8](https://img.shields.io/badge/.NET-8.0-512BD4)
+![AWS Lambda](https://img.shields.io/badge/AWS-Lambda-FF9900)
+![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
+
+A microservice responsible for user management, authentication, and account operations within the Arithmetic Calculator ecosystem. Built on AWS Lambda with .NET 8.
+
+## Features
+
+- **User Management**: Registration, authentication, and profile management
+- **Account Management**: Create accounts and manage balances
+- **Security**: JWT-based authentication with refresh token support
+- **Serverless Architecture**: Deployed as AWS Lambda functions
+
+## Architecture
+
+This project follows Clean Architecture principles with a clear separation of concerns:
+
+```
+├── Domain         - Core business logic and entities
+├── Application    - Use cases, DTOs and service interfaces
+├── Infrastructure - External concerns (persistence, security)
+└── Presentation   - API endpoints and request handling
+```
 
 ## Prerequisites
 
-Ensure the following software is installed on your machine:
+- [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0)
+- [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html) (configured)
+- [AWS Lambda Tools for .NET](https://github.com/aws/aws-extensions-for-dotnet-cli#aws-lambda-amazonlambdatools)
+  ```bash
+  dotnet tool install -g Amazon.Lambda.Tools
+  ```
+- [Docker](https://www.docker.com/products/docker-desktop) (optional, for containerized development)
 
-1. **.NET 8 SDK** - [Download](https://dotnet.microsoft.com/download/dotnet/8.0)
-2. **AWS CLI** - [Installation Instructions](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html)
-3. **AWS Lambda Tools for .NET** - Install using:
+## Getting Started
+
+### Local Development
+
+1. **Clone the repository**
    ```bash
-   dotnet tool install -g Amazon.Lambda.Tools
+   git clone https://github.com/yourusername/arithmetic-calculator-user-api.git
+   cd arithmetic-calculator-user-api
    ```
-4. **Docker** - [Install Docker](https://www.docker.com/products/docker-desktop)
 
----
+2. **Set up environment variables**
+   ```bash
+   # Windows (PowerShell)
+   $env:JWT_SECRET_KEY="your-secret-key"
+   $env:MYSQL_CONNECTION_STRING="Server=localhost;Database=calculator;User=root;Password=password;"
+   $env:PROMOTIONAL_AMOUNT="10"
 
-## Running Locally
+   # Linux/macOS
+   export JWT_SECRET_KEY="your-secret-key"
+   export MYSQL_CONNECTION_STRING="Server=localhost;Database=calculator;User=root;Password=password;"
+   export PROMOTIONAL_AMOUNT="10"
+   ```
 
-### 1. Clone the Repository
+3. **Restore dependencies**
+   ```bash
+   dotnet restore
+   ```
 
-Clone the repository to your local machine:
-
-```bash
-git clone https://github.com/luangrezende/arithmetic-calculator-user-api.git
-cd arithmetic-calculator-user-api
-```
-
-### 2. Restore Dependencies
-
-Restore required NuGet packages:
-
-```bash
-dotnet restore
-```
-
-### 3. Run the API Locally
-
-Use the AWS Lambda Test Tool to run the API locally:
-
-```bash
-dotnet lambda run-server
-```
+4. **Run locally using Lambda Test Tool**
+   ```bash
+   cd src/ArithmeticCalculatorUserApi.Presentation
+   dotnet lambda run-server
+   ```
 
 The API will be accessible at `http://localhost:5000`.
 
----
+### Docker Development
 
-## Running with Docker
+1. **Build the Docker image**
+   ```bash
+   docker build -t arithmetic-calculator-user-api .
+   ```
 
-### 1. Build the Docker Image
+2. **Run the container**
+   ```bash
+   docker run -p 5000:5000 \
+     -e JWT_SECRET_KEY="your-secret-key" \
+     -e MYSQL_CONNECTION_STRING="Server=host.docker.internal;Database=calculator;User=root;Password=password;" \
+     -e PROMOTIONAL_AMOUNT="10" \
+     arithmetic-calculator-user-api
+   ```
 
-Build the Docker image using the following command:
+## Deployment to AWS Lambda
 
+### Manual Deployment
+
+1. **Package the application**
+   ```bash
+   cd src/ArithmeticCalculatorUserApi.Presentation
+   dotnet lambda package --configuration Release
+   ```
+
+2. **Deploy to AWS Lambda**
+   ```bash
+   dotnet lambda deploy-function ArithmeticCalculatorUserApi
+   ```
+
+### Automated Deployment with GitHub Actions
+
+This project includes a CI/CD pipeline using GitHub Actions. To set up:
+
+1. Add the following secrets to your GitHub repository:
+   - `AWS_ACCESS_KEY_ID`
+   - `AWS_SECRET_ACCESS_KEY`
+   - `LAMBDA_EXECUTION_ROLE_ARN`
+   - `MYSQL_CONNECTION_STRING`
+   - `JWT_SECRET_KEY`
+
+2. See [GitHub Actions Setup](docs/github-actions-setup.md) for detailed configuration.
+
+## API Endpoints
+
+### Authentication
+
+- **POST /v1/user/auth/register** - Register new user
+- **POST /v1/user/auth/login** - User login
+- **POST /v1/user/auth/refresh** - Refresh authentication token
+- **POST /v1/user/auth/logout** - Logout (invalidate token)
+
+### User Profile
+
+- **GET /v1/user/profile** - Get authenticated user profile
+
+### Account Management
+
+- **POST /v1/user/account/balance** - Add funds to account
+- **PUT /v1/user/account/balance** - Withdraw funds from account
+
+## Testing
+
+Run the test suite with:
 ```bash
-docker build -t arithmetic-calculator-user-api .
+dotnet test
 ```
 
-### 2. Run the Docker Container
-
-Run the Docker container:
-
-```bash
-docker run -p 5000:5000 arithmetic-calculator-user-api
-```
-
-The API will now be available at `http://localhost:5000`.
-
----
-
-## Project Structure
-
-├── src/
-│ ├── ArithmeticCalculatorUserApi.Presentation/ # Main API project
-│ ├── ArithmeticCalculatorUserApi.Application/ # Application layer (services, DTOs, use cases)
-│ ├── ArithmeticCalculatorUserApi.Domain/ # Domain logic
-│ ├── ArithmeticCalculatorUserApi.Infrastructure/ # Infrastructure logic
-├── tests/
-│ ├── ArithmeticCalculatorUserApi.Domain.Tests/ # Unit tests
-├── .github/workflows/ # CI/CD workflows
-├── .gitignore
-├── ArithmeticCalculatorUserApi.sln # Solution file
-└── README.md
-
----
+The project includes unit tests for domain, application, and infrastructure layers.
 
 ## Configuration
 
-Update the `aws-lambda-tools-defaults.json` file as needed for your Lambda configuration. Example:
-
+The AWS Lambda configuration is in `aws-lambda-tools-defaults.json`:
 ```json
 {
-  "function-name": "ArithmeticCalculatorUserApi",
-  "function-handler": "ArithmeticCalculatorUserApi::ArithmeticCalculatorUserApi.Function::FunctionHandler",
+  "profile": "default",
+  "region": "us-east-1",
+  "configuration": "Release",
   "framework": "net8.0",
-  "memory-size": 256,
-  "timeout": 30,
-  "region": "us-east-1"
+  "function-runtime": "dotnet8",
+  "function-memory-size": 1024,
+  "function-timeout": 60,
+  "function-handler": "ArithmeticCalculatorUserApi.Presentation::ArithmeticCalculatorUserApi.Presentation.Function::FunctionHandler",
+  "function-name": "ArithmeticCalculatorUserApi",
+  "function-description": "Lambda function for Arithmetic Calculator User API",
+  "package-type": "Zip"
 }
 ```
 
----
+## Contributing
 
-## Testing the API
-
-Use tools like **Postman** or **curl** to test the API. Example with `curl`:
-
-```bash
-curl -X GET http://localhost:5000/api/users
-```
-
----
-
-## Resources
-
-- [AWS Lambda for .NET](https://docs.aws.amazon.com/lambda/latest/dg/lambda-dotnet.html)
-- [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-quickstart.html)
-- [Docker Documentation](https://docs.docker.com/get-started/)
-
----
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
 ## License
 
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for more information.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## Acknowledgements
+
+- [AWS Lambda](https://aws.amazon.com/lambda/)
+- [.NET Core](https://dotnet.microsoft.com/)
+- [AWS Serverless Application Model](https://aws.amazon.com/serverless/sam/)
