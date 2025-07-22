@@ -9,6 +9,7 @@ on:
 env:
   AWS_REGION: us-east-1
   DOTNET_VERSION: '8.0'
+  PROMOTIONAL_AMOUNT: '80'
 
 jobs:
   deploy:
@@ -45,7 +46,7 @@ jobs:
 
     - name: Run Unit Tests
       env:
-        PROMOTIONAL_AMOUNT: "100"
+        PROMOTIONAL_AMOUNT: ${{ env.PROMOTIONAL_AMOUNT }}
         JWT_SECRET_KEY: "test-secret-key-for-unit-tests-only"
         MYSQL_CONNECTION_STRING: "Server=localhost;Database=test;User=test;Password=test;"
       run: |
@@ -81,7 +82,7 @@ jobs:
             --function-name ArithmeticCalculatorUserApi \
             --timeout 60 \
             --memory-size 1024 \
-            --environment Variables="{MYSQL_CONNECTION_STRING=${{ secrets.MYSQL_CONNECTION_STRING }},JWT_SECRET_KEY=${{ secrets.JWT_SECRET_KEY }}}"
+            --environment Variables="{MYSQL_CONNECTION_STRING=${{ secrets.MYSQL_CONNECTION_STRING }},JWT_SECRET_KEY=${{ secrets.JWT_SECRET_KEY }},PROMOTIONAL_AMOUNT=${{ env.PROMOTIONAL_AMOUNT }}}"
         else
           echo "Creating Lambda function"
           aws lambda create-function \
@@ -92,5 +93,5 @@ jobs:
             --zip-file fileb://src/ArithmeticCalculatorUserApi.Presentation/deployment-package.zip \
             --timeout 60 \
             --memory-size 1024 \
-            --environment Variables="{MYSQL_CONNECTION_STRING=${{ secrets.MYSQL_CONNECTION_STRING }},JWT_SECRET_KEY=${{ secrets.JWT_SECRET_KEY }}}"
+            --environment Variables="{MYSQL_CONNECTION_STRING=${{ secrets.MYSQL_CONNECTION_STRING }},JWT_SECRET_KEY=${{ secrets.JWT_SECRET_KEY }},PROMOTIONAL_AMOUNT=${{ env.PROMOTIONAL_AMOUNT }}}"
         fi
