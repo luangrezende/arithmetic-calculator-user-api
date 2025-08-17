@@ -25,10 +25,12 @@ public class UserHandler
     public async Task<APIGatewayProxyResponse> HandleRequest(APIGatewayProxyRequest request)
     {
         var path = request.Path ?? "/";
-        if (path.StartsWith("/prod/", StringComparison.OrdinalIgnoreCase))
-            path = path.Substring(5);
-        else if (string.Equals(path, "/prod", StringComparison.OrdinalIgnoreCase))
-            path = "/";
+        
+        var segments = path.Split('/', StringSplitOptions.RemoveEmptyEntries);
+        if (segments.Length > 0 && !segments[0].Equals("api", StringComparison.OrdinalIgnoreCase))
+        {
+            path = "/" + string.Join("/", segments.Skip(1));
+        }
 
         if (path.StartsWith("/api/", StringComparison.OrdinalIgnoreCase))
             path = path.Substring(4);
