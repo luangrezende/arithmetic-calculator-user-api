@@ -26,19 +26,12 @@ public class UserHandler
     {
         return request.HttpMethod switch
         {
-            "GET" when request.Path == "/v1/user/profile" => await GetProfile(request),
             "GET" when request.Path == "/user/profile" => await GetProfile(request),
-            "POST" when request.Path == "/v1/user/auth/login" => await Login(request),
             "POST" when request.Path == "/auth/login" => await Login(request),
-            "POST" when request.Path == "/v1/user/auth/refresh" => await RefreshToken(request),
             "POST" when request.Path == "/auth/refresh" => await RefreshToken(request),
-            "POST" when request.Path == "/v1/user/auth/logout" => await Logout(request),
             "POST" when request.Path == "/auth/logout" => await Logout(request),
-            "POST" when request.Path == "/v1/user/auth/register" => await Register(request),
             "POST" when request.Path == "/auth/register" => await Register(request),
-            "POST" when request.Path == "/v1/user/account/balance" => await AddBalance(request),
             "POST" when request.Path == "/user/account/balance" => await AddBalance(request),
-            "PUT" when request.Path == "/v1/user/account/balance" => await DebitBalance(request),
             "PUT" when request.Path == "/user/account/balance" => await DebitBalance(request),
             _ => ResponseHelper.BuildResponse(HttpStatusCode.NotFound, new { error = ApiErrorMessages.EndpointNotFound })
         };

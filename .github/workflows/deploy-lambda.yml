@@ -82,6 +82,7 @@ jobs:
             --function-name ArithmeticCalculatorUserApi \
             --timeout 60 \
             --memory-size 1024 \
+            --vpc-config SubnetIds="${{ secrets.LAMBDA_SUBNET_IDS }}",SecurityGroupIds="${{ secrets.LAMBDA_SECURITY_GROUP_ID }}" \
             --environment Variables="{MYSQL_CONNECTION_STRING=${{ secrets.MYSQL_CONNECTION_STRING }},JWT_SECRET_KEY=${{ secrets.JWT_SECRET_KEY }},PROMOTIONAL_AMOUNT=${{ env.PROMOTIONAL_AMOUNT }}}"
         else
           echo "Creating Lambda function"
@@ -93,5 +94,6 @@ jobs:
             --zip-file fileb://src/ArithmeticCalculatorUserApi.Presentation/deployment-package.zip \
             --timeout 60 \
             --memory-size 1024 \
+            --vpc-config SubnetIds="${{ secrets.LAMBDA_SUBNET_IDS }}",SecurityGroupIds="${{ secrets.LAMBDA_SECURITY_GROUP_ID }}" \
             --environment Variables="{MYSQL_CONNECTION_STRING=${{ secrets.MYSQL_CONNECTION_STRING }},JWT_SECRET_KEY=${{ secrets.JWT_SECRET_KEY }},PROMOTIONAL_AMOUNT=${{ env.PROMOTIONAL_AMOUNT }}}"
         fi
