@@ -24,17 +24,28 @@ public class UserHandler
 
     public async Task<APIGatewayProxyResponse> HandleRequest(APIGatewayProxyRequest request)
     {
+        var path = request.Path ?? "/";
+        if (path.StartsWith("/prod/", StringComparison.OrdinalIgnoreCase))
+            path = path.Substring(5);
+        else if (string.Equals(path, "/prod", StringComparison.OrdinalIgnoreCase))
+            path = "/";
+
+        if (path.StartsWith("/api/", StringComparison.OrdinalIgnoreCase))
+            path = path.Substring(4);
+        else if (string.Equals(path, "/api", StringComparison.OrdinalIgnoreCase))
+            path = "/";
+
         return request.HttpMethod switch
         {
             "OPTIONS" => HandleOptionsRequest(),
-            "GET" when request.Path == "/user/health" => HandleHealthCheck(),
-            "GET" when request.Path == "/user/profile" => await GetProfile(request),
-            "POST" when request.Path == "/auth/login" => await Login(request),
-            "POST" when request.Path == "/auth/refresh" => await RefreshToken(request),
-            "POST" when request.Path == "/auth/logout" => await Logout(request),
-            "POST" when request.Path == "/auth/register" => await Register(request),
-            "POST" when request.Path == "/user/account/balance" => await AddBalance(request),
-            "PUT" when request.Path == "/user/account/balance" => await DebitBalance(request),
+            "GET" when path == "/user/health" => HandleHealthCheck(),
+            "GET" when path == "/user/profile" => await GetProfile(request),
+            "POST" when path == "/auth/login" => await Login(request),
+            "POST" when path == "/auth/refresh" => await RefreshToken(request),
+            "POST" when path == "/auth/logout" => await Logout(request),
+            "POST" when path == "/auth/register" => await Register(request),
+            "POST" when path == "/user/account/balance" => await AddBalance(request),
+            "PUT" when path == "/user/account/balance" => await DebitBalance(request),
             _ => ResponseHelper.BuildResponse(HttpStatusCode.NotFound, new { error = ApiErrorMessages.EndpointNotFound })
         };
     }
