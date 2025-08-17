@@ -26,6 +26,8 @@ public class UserHandler
     {
         return request.HttpMethod switch
         {
+            "OPTIONS" => HandleOptionsRequest(),
+            "GET" when request.Path == "/user/health" => HandleHealthCheck(),
             "GET" when request.Path == "/user/profile" => await GetProfile(request),
             "POST" when request.Path == "/auth/login" => await Login(request),
             "POST" when request.Path == "/auth/refresh" => await RefreshToken(request),
@@ -226,5 +228,15 @@ public class UserHandler
             throw new HttpResponseException(HttpStatusCode.Unauthorized, ApiErrorMessages.InvalidToken);
 
         return userId;
+    }
+
+    private static APIGatewayProxyResponse HandleOptionsRequest()
+    {
+        return ResponseHelper.BuildResponse(HttpStatusCode.OK, new { message = "CORS preflight" });
+    }
+
+    private static APIGatewayProxyResponse HandleHealthCheck()
+    {
+        return ResponseHelper.BuildResponse(HttpStatusCode.OK, new { message = "User API is healthy", timestamp = DateTime.UtcNow });
     }
 }
