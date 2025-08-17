@@ -13,7 +13,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace ArithmeticCalculatorUserApi.Presentation.Handlers;
 
-public class UserHandler
+public class UserHandler : BaseHandler
 {
     private readonly IServiceProvider _serviceProvider;
 
@@ -24,18 +24,7 @@ public class UserHandler
 
     public async Task<APIGatewayProxyResponse> HandleRequest(APIGatewayProxyRequest request)
     {
-        var path = request.Path ?? "/";
-        
-        var segments = path.Split('/', StringSplitOptions.RemoveEmptyEntries);
-        if (segments.Length > 0 && !segments[0].Equals("api", StringComparison.OrdinalIgnoreCase))
-        {
-            path = "/" + string.Join("/", segments.Skip(1));
-        }
-
-        if (path.StartsWith("/api/", StringComparison.OrdinalIgnoreCase))
-            path = path.Substring(4);
-        else if (string.Equals(path, "/api", StringComparison.OrdinalIgnoreCase))
-            path = "/";
+        var path = NormalizePath(request.Path);
 
         return request.HttpMethod switch
         {
@@ -48,7 +37,7 @@ public class UserHandler
             "POST" when path == "/auth/register" => await Register(request),
             "POST" when path == "/user/account/balance" => await AddBalance(request),
             "PUT" when path == "/user/account/balance" => await DebitBalance(request),
-            _ => ResponseHelper.BuildResponse(HttpStatusCode.NotFound, new { error = ApiErrorMessages.EndpointNotFound })
+            _ => HandleNotFound()
         };
     }
 
@@ -241,11 +230,6 @@ public class UserHandler
             throw new HttpResponseException(HttpStatusCode.Unauthorized, ApiErrorMessages.InvalidToken);
 
         return userId;
-    }
-
-    private static APIGatewayProxyResponse HandleOptionsRequest()
-    {
-        return ResponseHelper.BuildResponse(HttpStatusCode.OK, new { message = "CORS preflight" });
     }
 
     private static APIGatewayProxyResponse HandleHealthCheck()

@@ -1,0 +1,15 @@
+// Test cases for path normalization
+// Input: '/dev/api/user/health' -> Expected: '/user/health'
+// Input: '/staging/api/user/profile' -> Expected: '/user/profile'  
+// Input: '/prod/api/operation/health' -> Expected: '/operation/health'
+// Input: '/api/user/health' -> Expected: '/user/health'
+// Input: '/api/operation/records' -> Expected: '/operation/records'
+// Input: '/user/health' -> Expected: '/user/health'
+// Input: '/operation/dashboard' -> Expected: '/operation/dashboard'
+// Input: '/' -> Expected: '/'
+// Input: null -> Expected: '/'
+// Input: '' -> Expected: '/'
+
+// Regex patterns used:
+// StageRegex: ^/([^/]+)/api(/.*)?$ - Matches /stage/api/path
+// ApiPrefixRegex: ^/api(/.*)?$ - Matches /api/path
