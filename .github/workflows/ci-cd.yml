@@ -7,6 +7,11 @@ on:
     branches: [ main, master ]
   workflow_dispatch:
 
+permissions:
+  contents: write
+  packages: read
+  actions: read
+
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
@@ -26,7 +31,29 @@ jobs:
       run: dotnet build --no-restore --configuration Release
       
     - name: Test
-      run: dotnet test --no-build --verbosity normal --configuration Release
+      env:
+        PROMOTIONAL_AMOUNT: '80'
+        JWT_SECRET_KEY: "test-secret-key-for-unit-tests-only"
+        MYSQL_CONNECTION_STRING: "Server=localhost;Database=test;User=test;Password=test;"
+      run: dotnet test --no-build --verbosity normal --configuration Release --logger trx --results-directory ./test-results
+      
+    # Upload test results
+    - name: Upload Test Results
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: test-results
+        path: ./test-results/*.trx
+      
+    - name: Upload build artifacts
+      if: github.event_name == 'workflow_dispatch'
+      uses: actions/upload-artifact@v4
+      with:
+        name: build-artifacts
+        path: |
+          src/
+          !src/**/bin/Debug/
+          !src/**/obj/Debug/
 
   deploy-and-release:
     needs: build-and-test
@@ -37,6 +64,11 @@ jobs:
     - uses: actions/checkout@v4
       with:
         fetch-depth: 0
+        
+    - name: Download build artifacts
+      uses: actions/download-artifact@v4
+      with:
+        name: build-artifacts
         
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
@@ -54,35 +86,100 @@ jobs:
         aws-region: us-east-1
         
     - name: Deploy to AWS Lambda
+      env:
+        PROMOTIONAL_AMOUNT: '80'
+      working-directory: src/ArithmeticCalculatorUserApi.Presentation
       run: |
-        cd src/ArithmeticCalculatorUserApi.Presentation
-        dotnet lambda deploy-function --configuration Release
+        dotnet lambda package --configuration Release --output-package deployment-package.zip
+        
+        if aws lambda get-function --function-name ArithmeticCalculatorUserApi > /dev/null 2>&1; then
+          echo "Updating existing Lambda function..."
+          aws lambda update-function-code \
+            --function-name ArithmeticCalculatorUserApi \
+            --zip-file fileb://deployment-package.zip
+          
+          echo "Waiting for function update to complete..."
+          aws lambda wait function-updated \
+            --function-name ArithmeticCalculatorUserApi
+          
+          echo "Updating function configuration..."
+          aws lambda update-function-configuration \
+            --function-name ArithmeticCalculatorUserApi \
+            --timeout 30 \
+            --memory-size 256 \
+            --vpc-config SubnetIds="${{ secrets.LAMBDA_SUBNET_IDS }}",SecurityGroupIds="${{ secrets.LAMBDA_SECURITY_GROUP_ID }}" \
+            --environment Variables="{MYSQL_CONNECTION_STRING=${{ secrets.MYSQL_CONNECTION_STRING }},JWT_SECRET_KEY=${{ secrets.JWT_SECRET_KEY }},PROMOTIONAL_AMOUNT=$PROMOTIONAL_AMOUNT}"
+        else
+          echo "Creating new Lambda function..."
+          aws lambda create-function \
+            --function-name ArithmeticCalculatorUserApi \
+            --runtime dotnet8 \
+            --role ${{ secrets.LAMBDA_EXECUTION_ROLE_ARN }} \
+            --handler ArithmeticCalculatorUserApi.Presentation::ArithmeticCalculatorUserApi.Presentation.Function::FunctionHandler \
+            --zip-file fileb://deployment-package.zip \
+            --timeout 30 \
+            --memory-size 256 \
+            --vpc-config SubnetIds="${{ secrets.LAMBDA_SUBNET_IDS }}",SecurityGroupIds="${{ secrets.LAMBDA_SECURITY_GROUP_ID }}" \
+            --environment Variables="{MYSQL_CONNECTION_STRING=${{ secrets.MYSQL_CONNECTION_STRING }},JWT_SECRET_KEY=${{ secrets.JWT_SECRET_KEY }},PROMOTIONAL_AMOUNT=$PROMOTIONAL_AMOUNT}"
+        fi
+        
+        echo "Lambda deployment completed successfully!"
         
     - name: Get next version
       id: version
       run: |
-        # Get the latest tag or default to v0.0.0
-        LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
-        echo "Latest tag: $LATEST_TAG"
+        LATEST_RELEASE=$(curl -s "https://api.github.com/repos/${{ github.repository }}/releases/latest" | jq -r '.tag_name // "v0.0.0"')
+        echo "Latest release: $LATEST_RELEASE"
         
-        # Extract version number and increment patch
-        VERSION=${LATEST_TAG#v}
+        VERSION=${LATEST_RELEASE#v}
         IFS='.' read -r major minor patch <<< "$VERSION"
-        NEW_PATCH=$((patch + 1))
-        NEW_VERSION="v${major}.${minor}.${NEW_PATCH}"
         
+        COMMIT_MSG="${{ github.event.head_commit.message }}"
+        
+        if [[ "$COMMIT_MSG" == *"BREAKING CHANGE"* ]] || [[ "$COMMIT_MSG" == *"major:"* ]]; then
+          NEW_MAJOR=$((major + 1))
+          NEW_VERSION="v${NEW_MAJOR}.0.0"
+          echo "Major version bump detected"
+        elif [[ "$COMMIT_MSG" == *"feat:"* ]] || [[ "$COMMIT_MSG" == *"feature:"* ]]; then
+          NEW_MINOR=$((minor + 1))
+          NEW_VERSION="v${major}.${NEW_MINOR}.0"
+          echo "Minor version bump detected"
+        else
+          NEW_PATCH=$((patch + 1))
+          NEW_VERSION="v${major}.${minor}.${NEW_PATCH}"
+          echo "Patch version bump detected"
+        fi
+        
+        echo "New version: $NEW_VERSION"
         echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
+        echo "release_type=$(if [[ "$COMMIT_MSG" == *"BREAKING CHANGE"* ]] || [[ "$COMMIT_MSG" == *"major:"* ]]; then echo "major"; elif [[ "$COMMIT_MSG" == *"feat:"* ]] || [[ "$COMMIT_MSG" == *"feature:"* ]]; then echo "minor"; else echo "patch"; fi)" >> $GITHUB_OUTPUT
         
     - name: Create Release
-      uses: actions/create-release@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      uses: softprops/action-gh-release@v1
       with:
         tag_name: ${{ steps.version.outputs.version }}
-        release_name: Release ${{ steps.version.outputs.version }}
+        name: ${{ steps.version.outputs.version }} - User API
         body: |
-          ## Changes
-          - Automated release from CI/CD pipeline
-          - Lambda function deployed successfully
+          ## Release ${{ steps.version.outputs.version }}
+          
+          **Release Type:** ${{ steps.version.outputs.release_type }} release
+          
+          ### Deployed Components
+          - User API Lambda Function
+          - Build SHA: `${{ github.sha }}`
+          - Deployment Date: $(date -u +"%Y-%m-%d %H:%M:%S UTC")
+          
+          ### Technical Details
+          - .NET 8.0 Runtime
+          - AWS Lambda Deployment
+          - JWT Authentication & bcrypt
+          - Clean Architecture Implementation
+          
+          ### Commit Message
+          ```
+          ${{ github.event.head_commit.message }}
+          ```
         draft: false
         prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
