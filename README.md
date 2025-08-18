@@ -40,7 +40,7 @@ This project follows Clean Architecture principles with a clear separation of co
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/yourusername/arithmetic-calculator-user-api.git
+   git clone https://github.com/luangrezende/arithmetic-calculator-user-api.git
    cd arithmetic-calculator-user-api
    ```
 
@@ -115,6 +115,10 @@ This project includes a CI/CD pipeline using GitHub Actions. To set up:
 2. See [GitHub Actions Setup](docs/github-actions-setup.md) for detailed configuration.
 
 ## API Endpoints
+
+### Health Check
+
+- **GET /user/health** - Health check endpoint for monitoring
 
 ### Authentication
 
